@@ -1,23 +1,23 @@
-from typing import List
+from typing import List, Union
 
-from basic import *
+import basic
 
 
 class UI:
     """用户界面类，用于构建和显示格式化的控制台界面
     
-    属性:
-        width (int): UI显示宽度（单位：半角字符）
-        contents (List[str]): 存储界面内容的列表
+    该类提供了一系列方法用于创建结构化的控制台界面，
+    支持标题、信息文本、选项列表、分割线等元素的组合排列。
+    考虑了不同字符宽度的显示问题，支持等宽和非等宽字体。
     """
     
-    def __init__(self, width: int = UI_WIDTH) -> None:
+    def __init__(self, width: Union[int, None] = None) -> None:
         """初始化UI实例
         
         Args:
-            width: UI显示宽度，默认为UI_WIDTH
+            width: UI显示宽度，默认为basic模块中的ui_width
         """
-        self.width = width
+        self.width = basic.ui_width if width is None else width  # UI的显示宽度，单位为全角字符
         self.contents: List[str] = []  # 存储界面内容的列表
 
     def info(self, message: str) -> 'UI':
@@ -29,7 +29,7 @@ class UI:
         Returns:
             返回self以支持链式调用
         """
-        self.contents.append(self._format_output([message], self.width, self.width))
+        self.contents.append(self._format_output([message], self.width))
         return self
 
     def header(self, text: str, right_aligned: str = '0: 返回') -> 'UI':
@@ -42,22 +42,30 @@ class UI:
         Returns:
             返回self以支持链式调用
         """
-        back_part = ' ' * (self.width - calculate_display_width(text) - calculate_display_width(right_aligned)) + right_aligned if right_aligned else ''
+        # 计算右侧文本的位置，确保标题文本和右侧文本正确对齐
+        back_part = ' ' * int((self.width - display_width(text) - display_width(right_aligned)) // display_width(' ')) + right_aligned if right_aligned else ''
         title_line = text + back_part + '\n'
         self.contents.append(title_line)
         return self
 
-    def choice(self, options: List[str], block_size: int = 20) -> 'UI':
+    def choice(self, options: List[str], block_size: int = 10, addnum: bool = True, startnum: int = 1) -> 'UI':
         """添加选项列表到界面
         
         Args:
             options: 选项文本列表
-            block_size: 每个选项块的显示宽度，默认为20
+            block_size: 每个选项块的显示宽度，默认为10
+            addnum: 是否自动添加编号，默认为True
+            startnum: 起始编号，默认为1
             
         Returns:
             返回self以支持链式调用
         """
-        self.contents.append(self._format_output(options, block_size, self.width))
+        if addnum:
+            # 为选项添加编号
+            for i in range(len(options)):
+                options[i] = f'{startnum}: ' + options[i]
+                startnum += 1
+        self.contents.append(self._format_output(options, block_size))
         return self
     
     def line(self, char: str) -> 'UI':
@@ -69,7 +77,7 @@ class UI:
         Returns:
             返回self以支持链式调用
         """
-        self.contents.append(char * (self.width//calculate_display_width(char)) + '\n')
+        self.contents.append(char * int(self.width//display_width(char)) + '\n')
         return self
     
     def center(self, text: str, fillchar: str = ' ') -> 'UI':
@@ -82,13 +90,11 @@ class UI:
         Returns:
             返回self以支持链式调用
         """
-        text_width = calculate_display_width(text)
+        text_width = display_width(text)
         if text_width >= self.width:
             self.contents.append(text + '\n')
         else:
-            padding = (self.width - text_width) // 2
-            # 确保填充字符是单宽度字符
-            fillchar = fillchar[0] if fillchar else ' '
+            padding = int((self.width - text_width) / display_width(fillchar) // 2)
             centered = fillchar * padding + text + fillchar * padding
             # 调整奇数宽度的情况
             if len(centered) < self.width:
@@ -119,9 +125,12 @@ class UI:
         Returns:
             新的UI实例，包含当前所有内容
         """
-        return self
+        ui = UI(self.width)
+        ui.contents = self.contents.copy()
+        return ui
+
         
-    def _format_output(self, input_word_group: List[str], len_block: int, long: int) -> str:
+    def _format_output(self, input_word_group: List[str], len_block: int) -> str:
         """格式化输出文本，将文本分组并按指定宽度排列
         
         Args:
@@ -132,7 +141,7 @@ class UI:
         Returns:
             格式化后的字符串
         """
-        num = long // len_block  # 计算每行可以容纳的块数
+        num = self.width // len_block  # 计算每行可以容纳的块数
         cnt_block = 0  # 当前行已添加的块数
         opt = ''  # 当前行正在构建的内容
         res = ''  # 最终结果
@@ -165,7 +174,7 @@ class UI:
         current_width = 0  # 当前块的显示宽度
         
         for char in text:
-            char_width = calculate_display_width(char)
+            char_width = display_width(char)
             if current_width + char_width > length:  # 当前块已超过长度限制
                 if current:
                     result.append(current)
@@ -176,7 +185,7 @@ class UI:
             current_width += char_width
             
         if current:  # 添加最后一个块
-            while calculate_display_width(current) < length:
+            while display_width(current) < length:
                 current += ' '  # 用空格填充不足部分
             result.append(current)
             
@@ -200,8 +209,39 @@ class UI:
         ui.contents = self.contents + other.contents
         return ui
 
-def calculate_display_width(text: str) -> int:
-    """计算字符串的实际显示宽度（考虑全角字符）
+
+def is_in_range(char: str, range) -> bool:
+    """检查字符是否在指定范围内
+    
+    Args:
+        char: 要检查的字符
+        range: 字符范围列表，每个范围由起始和结束码点组成
+        
+    Returns:
+        如果字符在范围内返回True，否则返回False
+    """
+    code = ord(char)
+    for start, end in range:
+        if start <= code <= end:
+            return True
+    return False
+
+def display_width(text: str) -> float:
+    """计算字符串的实际显示宽度
+    
+    Args:
+        text: 要计算的字符串
+        
+    Returns:
+        字符串的显示宽度
+    """
+    if basic.is_equal_width_font:
+        return _display_width_of_equal_width_font(text)
+    else:
+        return _display_width_of_non_equal_width_font(text)
+
+def _display_width_of_equal_width_font(text: str) -> float:
+    """计算字符串在等宽字体中的显示宽度
     
     全角字符（如中文、日文、韩文、全角符号、emoji等）计为2个宽度，
     半角字符计为1个宽度。
@@ -215,16 +255,33 @@ def calculate_display_width(text: str) -> int:
     width = 0
     for char in text:
         # 检查字符是否属于全角字符范围
-        if (ord(char) >= 0x4E00 and ord(char) <= 0x9FFF or   # 中日韩统一表意文字
-           ord(char) >= 0xFF00 and ord(char) <= 0xFFEF or    # 全角符号
-           ord(char) >= 0x2600 and ord(char) <= 0x26FF or    # 杂项符号
-           ord(char) >= 0x2700 and ord(char) <= 0x27BF or    # 装饰符号
-           ord(char) >= 0x1F300 and ord(char) <= 0x1F5FF or  # 象形文字
-           ord(char) >= 0x1F600 and ord(char) <= 0x1F64F or  # Emoji表情
-           ord(char) >= 0x1F680 and ord(char) <= 0x1F6FF):   # 交通和地图符号
-            width += 2
-        else:
+        if is_in_range(char, basic.FULL_WIDTH_CHAR_RANGE):
             width += 1
+        else:
+            width += 0.5
+    return width
+
+def _display_width_of_non_equal_width_font(text: str) -> float:
+    """计算字符串在非等宽字体中的显示宽度
+    
+    Args:
+        text: 要计算的字符串
+        
+    Returns:
+        字符串的显示宽度
+    """
+    width = 0.0
+    for char in text:
+        # 检查是否在映射表中
+        if char in basic.CHAR_WIDTH_MAPS[basic.font]:
+            width += basic.CHAR_WIDTH_MAPS[basic.font][char]
+        # 检查是否为中文字符
+        elif is_in_range(char, basic.CHINESE_CHAR_RANGE):
+            # 中文字符默认宽度（可根据实际字体调整）
+            width += 1
+        else:
+            # 其他字符默认宽度
+            width += 0.5
     return width
 
 def bar(val: float, max_: float, lenth: int = 8, empty: str ='.', full: str = '#') -> str:

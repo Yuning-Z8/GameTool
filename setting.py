@@ -1,23 +1,21 @@
 import functools
+import sys
 from typing import List, Dict, Tuple, Callable, Any, Literal, Union
 
-from basic import *
-from ui import *
-from input import *
+import basic
+from basic import DL, CL, MD, INF
+from ui import UI
+from input import yinput
 
 
 class Option:
     """配置项基类（抽象类）
     
-    属性:
-        name (str): 配置项在全局变量中的名称
-        optname (str): 配置项显示名称
-        constraction (str|None): 配置项说明文本
-        limit: 配置项值的限制条件
-        value: 配置项的当前值
+    所有配置项类型的基类，定义了配置项的基本结构和通用方法。
+    不直接实例化，而是通过子类实现具体的配置项类型。
     """
     
-    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class'], str]]], None] = None,
+    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class', 'module'], str]]], None] = None,
                  optname: Union[str, None] = None, constraction: Union[str, None] = None,
                  limit: Any = None) -> None:
         """初始化配置项
@@ -36,17 +34,23 @@ class Option:
         self.optname = optname
         self.constraction = lambda: constraction
         self.limit = limit
-        self.condition_of_show = lambda: True
+        self.condition_of_show = lambda: True  # 控制配置项是否显示的条件函数
     
     def value(self) -> Any:
-        """获取配置项的当前值"""
-        v = globals()[self.name]
+        """获取配置项的当前值
+        
+        Returns:
+            配置项的当前值
+        """
+        v = basic.namespace[self.name]
         if self.path is not None:
             for i in self.path:
-                if i[0] == DL:
+                if i[0] == DL:  # 字典类型访问
                     v = v[i[1]]
-                else:  # CL
+                elif i[0] == CL:  # 类属性访问
                     v = getattr(v, i[1])
+                elif i[0] == MD:  # 模块属性访问
+                    v = getattr(sys.modules[v.__name__], i[1])
         return v
     
     def value_set(self, value: Any = None) -> None:
@@ -59,9 +63,9 @@ class Option:
             子类必须实现具体的值验证逻辑
         """
         if self.path is None:
-            globals()[self.name] = value
+            basic.namespace[self.name] = value
         else:
-            target = globals()[self.name]
+            target = basic.namespace[self.name]
             # 导航到父对象
             for i in self.path[:-1]:
                 if i[0] == DL:
@@ -113,7 +117,7 @@ class Option:
 class Oint(Option):
     """整数类型配置项"""
     
-    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class'], str]]], None] = None,
+    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class', 'module'], str]]], None] = None,
                  optname: Union[str, None] = None, constraction: Union[str, None] = None, 
                  limit: Tuple[int, int] = (0, INF)) -> None:
         """初始化整数配置项
@@ -151,7 +155,7 @@ class Oint(Option):
 class Obool(Option):
     """布尔类型配置项"""
     
-    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class'], str]]], None] = None,
+    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class', 'module'], str]]], None] = None,
                  optname: Union[str, None] = None, constraction: Union[str, None] = None) -> None:
         """初始化布尔配置项
         
@@ -181,7 +185,7 @@ class Obool(Option):
 class Ochoice(Option):
     """多选一类型配置项"""
     
-    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class'], str]]], None] = None,
+    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class', 'module'], str]]], None] = None,
                  optname: Union[str, None] = None, choices: Union[Dict[str, Any], List[Any], None] = None,
                  constraction: Union[str, None] = None) -> None:
         """初始化多选一配置项
@@ -201,13 +205,21 @@ class Ochoice(Option):
             choices = {str(v): v for v in choices}
         
         super().__init__(name, path, optname, constraction, list(choices.values()))
-        self.choices = choices
-        self.reverse_choices = {v: k for k, v in choices.items()}
+        self.choices = choices  # 显示名到值的映射
+        self.reverse_choices = {v: k for k, v in choices.items()}  # 值到显示名的映射
     
     def value_set(self, value: Any = None) -> None:
-        """设置值（支持按编号或直接值设置）"""
+        """设置值（支持按编号或直接值设置）
+        
+        Args:
+            value: 可以是选项编号或直接值
+            
+        Raises:
+            ValueError: 如果选择无效
+        """
         try:
             if value is None:
+                # 没有提供值时，显示选项列表供用户选择
                 value = yinput(UI().info('从以下值选择').choice(self.get_choice_display()).flush())
             # 尝试按编号设置
             if isinstance(value, str) and value.isdigit():
@@ -224,13 +236,17 @@ class Ochoice(Option):
         return f'[{self.reverse_choices.get(self.value(), "未知")}]'
     
     def get_choice_display(self) -> List[str]:
-        """获取带编号的可选值列表"""
+        """获取带编号的可选值列表
+        
+        Returns:
+            格式化的可选值列表，如 ["1: 选项A", "2: 选项B"]
+        """
         return [f"{i+1}: {name}" for i, (name, val) in enumerate(self.choices.items())]
 
 class Ostr(Option):
     """字符串类型配置项"""
 
-    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class'], str]]], None] = None,
+    def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class', 'module'], str]]], None] = None,
                  optname: Union[str, None] = None, constraction: Union[str, None] = None,
                  limit: Union[int, Tuple[int, int], None] = None) -> None:
         """初始化字符串配置项
@@ -272,9 +288,7 @@ class Ostr(Option):
 class Setting:
     """设置菜单类，用于管理一组配置项
     
-    属性:
-        name (str): 设置菜单名称
-        options (List[Option | Setting]): 包含的配置项或子菜单列表
+    表示一个设置菜单，可以包含多个配置项或子菜单，形成层级结构。
     """
     
     def __init__(self, name: str = '设置', constraction: Union[str, None] = None) -> None:
@@ -286,7 +300,7 @@ class Setting:
         self.name = name
         self.options: List['Union[Option, Setting]'] = []  # 存储配置项或子菜单
         self.constraction = lambda: constraction
-        self.condition_of_show = lambda: True
+        self.condition_of_show = lambda: True  # 控制菜单是否显示的条件函数
 
     def add(self, *options: 'Union[Option, Setting]') -> 'Setting':
         """添加配置项或子菜单
@@ -301,7 +315,10 @@ class Setting:
         return self
     
     def look(self) -> None:
-        """显示并管理设置菜单"""
+        """显示并管理设置菜单
+        
+        显示当前菜单的所有配置项和子菜单，处理用户交互，允许修改配置值。
+        """
         ui = UI().header(self.name).line('=')
         while True:
             i = 0
