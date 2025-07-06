@@ -67,7 +67,7 @@ st.add(
 while True:
     ui = (
         UI()
-        .center('示例')
+        .center_text('示例')
         .line('-')
         .choice(['设置', '退出'])
     )
@@ -95,10 +95,10 @@ ui = UI(width=60)
 ### 添加内容到UI
 ```python
 # 添加标题
-ui.header("游戏菜单", "0: 返回")
+ui.split_text("游戏菜单", "0: 返回")
 
 # 添加信息文本
-ui.info("这是一个游戏菜单")
+ui.text("这是一个游戏菜单")
 
 # 添加选项列表
 ui.choice(["开始游戏", "加载存档", "游戏设置", "退出游戏"])
@@ -107,7 +107,7 @@ ui.choice(["开始游戏", "加载存档", "游戏设置", "退出游戏"])
 ui.line("=")
 
 # 添加居中文本
-ui.center("欢迎来到游戏世界", fillchar="*")
+ui.center_text("欢迎来到游戏世界", fillchar="*")
 ```
 
 ### 输出
