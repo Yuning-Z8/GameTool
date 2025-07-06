@@ -220,7 +220,7 @@ class Ochoice(Option):
         try:
             if value is None:
                 # 没有提供值时，显示选项列表供用户选择
-                value = yinput(UI().info('从以下值选择').choice(self.get_choice_display()).flush())
+                value = yinput(UI().text('从以下值选择').choice(self.get_choice_display()).flush())
             # 尝试按编号设置
             if isinstance(value, str) and value.isdigit():
                 idx = int(value) - 1
@@ -319,7 +319,7 @@ class Setting:
         
         显示当前菜单的所有配置项和子菜单，处理用户交互，允许修改配置值。
         """
-        ui = UI().header(self.name).line('=')
+        ui = UI().split_text(self.name).line('=')
         while True:
             i = 0
             keys = []
@@ -329,20 +329,20 @@ class Setting:
                 keys.append(j)
                 i += 1
                 # 显示每个选项及其当前值
-                ui.header(f'{i}: {j}', j.value_name())
+                ui.split_text(f'{i}: {j}', j.value_name())
                 constraction = j.constraction()
                 if constraction is not None:
-                    ui.info(constraction)
+                    ui.text(constraction)
             # 获取用户输入
             i = yinput(ui.flush())
-            ui = UI().header(self.name).line('=')
+            ui = UI().split_text(self.name).line('=')
             if i == '0':  # 返回上一级
                 return
             i = i.split(' ')
             try:
                 opt = keys[int(i[0]) - 1]  # 获取选中的配置项
             except Exception as e:
-                ui.line('-').info(str(e)).line('-')  # 显示错误信息
+                ui.line('-').text(str(e)).line('-')  # 显示错误信息
                 continue
             if isinstance(opt, Option):
                 try:
@@ -351,7 +351,7 @@ class Setting:
                     else:
                         opt.value_set(i[1])  # 设置配置项的值
                 except Exception as e:
-                    ui.line('-').info(str(e)).line('-')
+                    ui.line('-').text(str(e)).line('-')
                     continue
             else:
                 opt.look()  # 如果是子菜单，递归显示
