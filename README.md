@@ -324,7 +324,7 @@ print(time)
 ```
 
 
-### 核心参数配置
+### 添加更多物理量支持
 物理量的自动转换需要定义以下核心参数：
 ```python
 return format_physical_quantity(
@@ -337,9 +337,6 @@ return format_physical_quantity(
     depth                 # 显示深度
 )
 ```
-
-
-### 参数详解（以距离为例）
 
 #### 单位名称映射 (`units`)
 ```python
@@ -368,7 +365,7 @@ conversion_factors = {
 ```
 - 所有单位需转换为基准单位（如距离以 `m` 为基准）。
 
-#### (4) 显示阈值 (`display_thresholds`)
+#### 显示阈值 (`display_thresholds`)
 用于控制单位切换的阈值和数值显示的小数位数。它的设计直接影响物理量的格式化输出结果。
 ```python
 display_thresholds = {
@@ -406,7 +403,7 @@ display_thresholds = {
 `float('inf')`：表示该单位是 最大单位，不会切换到更大的单位。
 `-1` 或 `0`：可用于强制保留小数位数。
 
-#### 4. 复合单位逻辑（`depth > 1`）
+#### 复合单位逻辑（`depth > 1`）
 当 `depth > 1` 时，函数会：
 1. 不同depth下的最大单位一致
 2. 忽略值为0的单位（除非所有单位均为0）。
