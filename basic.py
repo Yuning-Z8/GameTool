@@ -1,18 +1,10 @@
-from typing import Dict, Callable, Any
+from typing import Dict, Literal, Callable, Any
 
 
 # 全局常量定义
-INF = 2147483647  # 表示无穷大的整数值，为32位有符号整数的最大值
 
-
-# UI配置
-ui_width = 2000  # 默认UI显示宽度（单位：全角字符/100）
-is_equal_width_font = True  # 是否使用等宽字体的标志
-font = ''  # 当前使用的字体名称
-
-# 常见字符宽度映射表（非等宽字体）
-# 键为字体名称，值为字符到宽度比例的映射
-# 宽度比例表示相对于全角字符(宽度为100)的显示宽度
+# ui
+# 常见字符宽度映射表(键为字体名称，值为字符到宽度比例的映射)(全角字符宽度为100)
 CHAR_WIDTH_MAPS = {
     '': {
         # 基础ASCII字符
@@ -73,7 +65,6 @@ CHAR_WIDTH_MAPS = {
     'mi': {},
     'samsung': {},
 }
-
 # 中文字符范围
 CHINESE_CHAR_RANGE = [
     (0x4E00, 0x9FFF),  # CJK统一表意文字
@@ -83,7 +74,6 @@ CHINESE_CHAR_RANGE = [
     (0x2B740, 0x2B81F), # CJK扩展D
     (0x2B820, 0x2CEAF), # CJK扩展E
 ]
-
 # 全角字符范围
 FULL_WIDTH_CHAR_RANGE = CHINESE_CHAR_RANGE + [
     (0xFF00, 0xFFEF),  # 全角符号(包括全角ASCII字符)
@@ -94,17 +84,33 @@ FULL_WIDTH_CHAR_RANGE = CHINESE_CHAR_RANGE + [
     (0x1F680, 0x1F6FF),  # 交通和地图符号(如汽车、飞机等)
 ]
 
-
-# input配置
-# 输入动作映射表
-# 键为用户输入的命令，值为对应的处理函数
-input_act: Dict[str, Callable[[], Any]] = {}
-
-# setting配置
-namespace = globals()  # 获取当前全局符号表
+# setting
 DL = 'dictlike'  # 字典类型的标识符
 CL = 'class'     # 类类型的标识符
 MD = 'module'    # 模块类型的标识符
+
+
+
+
+# UI配置
+ui_width = 2000  # 默认UI显示宽度（单位：全角字符/100）
+is_equal_width_font = True  # 是否使用等宽字体的标志
+font = ''  # 当前使用的字体名称
+
+
+# input配置
+# 输入动作映射表(键为用户输入的命令，值为对应的处理函数)
+input_act: Dict[str, Callable[[], Any]] = {}
+
+
+# setting配置
+namespace = globals()  # 获取当前全局符号表
+
+
+# number配置
+unit_type: Literal['en', 'zh1', 'zh2'] = 'zh1'
+
+
 
 
 class GameOver(Exception):

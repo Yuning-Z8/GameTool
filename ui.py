@@ -55,7 +55,7 @@ class UI:
         
         Args:
             options: 选项文本列表
-            block_size: 每个选项块的显示宽度，默认为10
+            block_size: 每个选项块的显示宽度，默认为1000
             addnum: 是否自动添加编号，默认为True
             startnum: 起始编号，默认为1
             

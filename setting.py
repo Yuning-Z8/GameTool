@@ -3,7 +3,7 @@ import sys
 from typing import List, Dict, Tuple, Callable, Any, Literal, Union
 
 import basic
-from basic import DL, CL, MD, INF
+from basic import DL, CL, MD
 from ui import UI
 from input import yinput
 
@@ -119,7 +119,7 @@ class Oint(Option):
     
     def __init__(self, name: str, path: Union[List[Union[Tuple[Literal['dictlike'], Any], Tuple[Literal['class', 'module'], str]]], None] = None,
                  optname: Union[str, None] = None, constraction: Union[str, None] = None, 
-                 limit: Tuple[int, int] = (0, INF)) -> None:
+                 limit: Tuple[int, int] = (0, float('inf'))) -> None: # type: ignore
         """初始化整数配置项
         
         Args:

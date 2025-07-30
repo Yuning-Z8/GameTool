@@ -8,6 +8,8 @@
 - 强大的设置管理系统，支持不同类型的配置项和嵌套设置菜单
 - 链式调用API，使代码更加简洁和易读
 - 全角字符支持，正确处理中文等全角字符的显示宽度
+- 物理量格式化功能，支持距离、体积、质量和时间的自动单位转换与显示
+- 数字转换功能，支持阿拉伯数字到罗马数字、英文数字和中文单位数字的转换
 
 
 ## 模块介绍  
@@ -19,6 +21,9 @@
 
 ### setting 模块  
 提供设置管理功能，支持整数、布尔、多选一、字符串等多种配置项类型，以及嵌套设置菜单。  
+
+### number 模块
+提供物理量格式化和数字转换功能，支持距离、体积、质量、时间的单位自动转换，以及阿拉伯数字到罗马数字、英文数字和中文单位数字的转换。
 
 
 ## 安装与使用
@@ -261,12 +266,13 @@ def fullscreen_condition():
     return system_supports_fullscreen() 
 ```
 
-
-## 路径解析机制
+### 路径解析机制
 GameTool 使用特殊的路径表示法来引用变量和对象，支持三种类型的路径元素：
 - `CL`: 类属性
 - `MD`: 模块属性
 - `DL`: 字典/列表/元组元素（用于访问容器类型的元素）
+
+使用`(类型, 键)`列表表示路径
 
 ### 路径引用示例
 ```python
@@ -293,6 +299,136 @@ opt1 = Oint('example', [(MD, 'adict'), (DL, 'alist'), (DL, 1)])
 opt2 = Ostr('a', [(CL, 'astr')])
 ```
 
+
+## number 模块详细用法
+### 物理量格式化
+支持距离、体积、质量和时间的单位自动转换与显示，通过不同函数处理不同物理量，可指定初始单位和显示的单位数量。
+```python
+from number import auto_distance_expression, auto_volume_expression, auto_mass_expression, auto_time_expression
+
+# 距离格式化
+distance = auto_distance_expression(1500)  # 输入距离值，默认单位为米
+print(distance)
+
+# 体积格式化
+volume = auto_volume_expression(5)  # 输入体积值，默认单位为立方米
+print(volume)
+
+# 质量格式化
+mass = auto_mass_expression(500)  # 输入质量值，默认单位为克
+print(mass)
+
+# 时间格式化
+time = auto_time_expression(30)  # 输入时间值，默认单位为秒
+print(time)
+```
+
+
+### 核心参数配置
+物理量的自动转换需要定义以下核心参数：
+```python
+return format_physical_quantity(
+    value,                # 原始数值
+    val_unit,             # 原始单位
+    units,                # 多语言单位名称映射
+    unit_map,             # 单位层级关系（从小到大）
+    conversion_factors,   # 单位换算系数（相对于基准单位）
+    display_thresholds,   # 单位切换阈值
+    depth                 # 显示深度
+)
+```
+
+
+### 参数详解（以距离为例）
+
+#### 单位名称映射 (`units`)
+```python
+units = {
+    'en': ['m', 'km', 'AU', 'ly'],          # 英文单位
+    'zh1': ['米', '千米', '天文单位', '光年'], # 中文单位1
+    'zh2': ['米', '千米', '天文单位', '光年']  # 中文单位2
+}
+```
+需为每种语言提供单位名称列表，顺序与 `unit_map` 一致。
+
+#### 单位层级 (`unit_map`)
+```python
+unit_map = ['m', 'km', 'au', 'ly']  # 从最小单位到最大单位
+```
+定义单位的层级关系。
+
+#### 单位换算系数 (`conversion_factors`)
+```python
+conversion_factors = {
+    'm': 1,         # 1 米 = 1 米（基准单位）
+    'km': 1000,      # 1 千米 = 1000 米
+    'au': 15e10,     # 1 天文单位 ≈ 1.5亿公里
+    'ly': 946e13     # 1 光年 ≈ 9.46万亿公里
+}
+```
+- 所有单位需转换为基准单位（如距离以 `m` 为基准）。
+
+#### (4) 显示阈值 (`display_thresholds`)
+用于控制单位切换的阈值和数值显示的小数位数。它的设计直接影响物理量的格式化输出结果。
+```python
+display_thresholds = {
+    'm': [3000],        # >3000米时切换到千米
+    'km': [15e8],       # >15亿米时切换到天文单位
+    'au': [437e13, ...],# 天文单位的小数位控制
+    'ly': [float('inf')]# 光年为最大单位
+}
+```
+
+##### 参数结构
+`display_thresholds` 是一个 字典，其结构为：
+```python
+display_thresholds = {
+    '单位1': [阈值1, 小数位数阈值1, 小数位数阈值2, ...],
+    '单位2': [阈值2, ...],
+    ...
+}
+```
+函数会从最小单位开始检查，计算 `value`（换算为基准单位后的值）是否超过当前单位的 `阈值[0]`：
+- 如果不超过，则使用该单位。
+- 如果超过，则检查下一个更大的单位。
+
+每个单位的 `display_thresholds` 列表可以包含 多个阈值，用于动态调整小数位数：
+```python
+display_thresholds = {
+    'au': [1e12, 1000, 100],  # 天文单位的阈值配置
+}
+```  
+函数会从右往左检查 `value` 是否超过这些阈值，决定保留几位小数。
+- 如果 `value > 阈值[i]`，则保留 `i` 位小数。
+- 如果所有阈值均不满足，则保留 `0` 位小数（整数）。
+
+##### 特殊值
+`float('inf')`：表示该单位是 最大单位，不会切换到更大的单位。
+`-1` 或 `0`：可用于强制保留小数位数。
+
+#### 4. 复合单位逻辑（`depth > 1`）
+当 `depth > 1` 时，函数会：
+1. 不同depth下的最大单位一致
+2. 忽略值为0的单位（除非所有单位均为0）。
+3. 必要时会降低depth
+
+### 数字转换
+支持阿拉伯数字到罗马数字、英文数字和中文单位数字的转换。
+```python
+from number import roman_numerals, english_numerals, chniese_numerals
+
+# 阿拉伯数字转罗马数字
+roman = roman_numerals(1)
+print(roman)
+
+# 阿拉伯数字转英文数字
+english = english_numerals(1000)
+print(english)
+
+# 阿拉伯数字转中文单位数字
+chinese = chniese_numerals(10000)
+print(chinese)
+```
 
 ## 许可证
 GPL-3.0
