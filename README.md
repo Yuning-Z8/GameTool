@@ -12,20 +12,6 @@
 - 数字转换功能，支持阿拉伯数字到罗马数字、英文数字和中文单位数字的转换
 
 
-## 模块介绍  
-### ui 模块  
-提供控制台用户界面构建功能，核心是 `UI` 类，支持标题、选项列表、分割线等元素构建。  
-
-### input 模块  
-提供增强的输入处理功能，包括带指令控制的输入和范围限制的整数输入，以及玩家昵称获取工具。  
-
-### setting 模块  
-提供设置管理功能，支持整数、布尔、多选一、字符串等多种配置项类型，以及嵌套设置菜单。  
-
-### number 模块
-提供物理量格式化和数字转换功能，支持距离、体积、质量、时间的单位自动转换，以及阿拉伯数字到罗马数字、英文数字和中文单位数字的转换。
-
-
 ## 安装与使用
 ### 安装
 该框架可以直接通过复制源代码文件使用，不需要额外安装
@@ -38,13 +24,14 @@ import sys
 
 import basic
 from ui import UI
-from input import yinput, intinput
+from input import yinput, intinput, getname
 from setting import *
 
 basic.namespace = globals()
 basic.input_act['exit'] = sys.exit
 
-name = 'name'
+# 获取玩家名称
+player_name = getname(1)
 
 opt1 = Ochoice('basic', [(MD, 'font')], 'font', ['', 'vivo', 'mi', 'samsung'])
 @opt1.register_condition()
@@ -54,7 +41,7 @@ def cdt1():
 opt2 = Ostr('name', limit=(1, 16))
 @opt2.register_constraction()
 def cst1():
-    return f'当前名称: "{name}"'
+    return f'当前名称: "{player_name}"'
 
 st1 = Setting('显示设置').add(
     Obool('basic', [(MD, 'is_equal_width_font')], '等宽字体'),
@@ -117,7 +104,7 @@ ui.center_text("欢迎来到游戏世界", fillchar="*")
 
 ### 输出
 ```python
-print(ui.flush)
+print(ui.flush())
 ```
 ### 格式化输出
 ```python
@@ -131,7 +118,7 @@ print(f"文本显示宽度: {width}")
 # 生成进度条
 from ui import bar
 
-progress = bar(75, 100, lenth=20)
+progress = bar(75, 100, length=20)
 print(f"进度: {progress} 75%")
 ```
 
@@ -169,7 +156,7 @@ print(f"你输入的数字是: {number}")
 ```
 
 ### getname
-`getname` 是用于获取玩家昵称的工具，支持长度验证、快捷输入和重复检查：
+`getname` 是用于获取玩家昵称的工具，支持长度验证、快捷输入、黑名单检查和重复检查：
 
 ```python
 from input import getname
@@ -178,13 +165,16 @@ from input import getname
 name1 = getname(1)  # 获取玩家1的昵称
 name2 = getname(2)  # 获取玩家2的昵称
 
-# 允许重复昵称
-getname.is_seam_name_allowed = True  # 默认不允许
+# 自定义配置
+getname.is_seam_name_allowed = True  # 允许重复昵称
+getname.lenth_limit = (2, 15)  # 修改长度限制
+getname.blacklist = ['#', '@', '!']  # 修改禁止使用的字符
+getname.fast_name['ex'] = 'excemple'  # 添加快捷名称映射
 
 # 示例
-getname.is_seam_name_allowed = False  # 不允许重复
-player1 = getname(1)  # 提示"玩家1 请输入昵称！
-player2 = getname(2)  # 若输入与player1相同的昵称，会提示错误并要求重新输入
+getname.is_seam_name_allowed = True  # 允许重复
+player1 = getname(1)  # 提示"玩家1 请输入昵称！"
+player2 = getname(2)  # 若输入与player1相同的昵称，会自动添加#1后缀
 ```
 
 
@@ -325,7 +315,6 @@ print(time)
 
 
 ### 添加更多物理量支持
-物理量的自动转换需要定义以下核心参数：
 ```python
 return format_physical_quantity(
     value,                # 原始数值
@@ -376,8 +365,7 @@ display_thresholds = {
 }
 ```
 
-##### 参数结构
-`display_thresholds` 是一个 字典，其结构为：
+`display_thresholds` 的结构为：
 ```python
 display_thresholds = {
     '单位1': [阈值1, 小数位数阈值1, 小数位数阈值2, ...],
@@ -399,15 +387,15 @@ display_thresholds = {
 - 如果 `value > 阈值[i]`，则保留 `i` 位小数。
 - 如果所有阈值均不满足，则保留 `0` 位小数（整数）。
 
-##### 特殊值
-`float('inf')`：表示该单位是 最大单位，不会切换到更大的单位。
-`-1` 或 `0`：可用于强制保留小数位数。
+`float('inf')`：表示该单位是 最大单位，不会切换到更大的单位。  
+`-1` 或 `0`：可用于强制保留小数位数。  
+最后一个单位应当为`[float('inf'), ..., -1]`
 
-#### 复合单位逻辑（`depth > 1`）
+### 复合单位逻辑（`depth > 1`）
 当 `depth > 1` 时，函数会：
-1. 不同depth下的最大单位一致
-2. 忽略值为0的单位（除非所有单位均为0）。
-3. 必要时会降低depth
+- 不同depth下的最大单位一致
+- 忽略值为0的单位（除非所有单位均为0）。
+- 必要时会降低depth
 
 ### 数字转换
 支持阿拉伯数字到罗马数字、英文数字和中文单位数字的转换。

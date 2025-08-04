@@ -60,8 +60,11 @@ class GetName:
             names: 已使用的名称列表
             is_seam_name_allowed: 是否允许重复名称的标志
         """
-        self.names = []  # 存储已使用的名称
+        self.names = {}  # 存储已使用的名称
         self.is_seam_name_allowed = False  # 是否允许重复名称
+        self.fast_name = {'y': 'yuning'}
+        self.lenth_limit = (1, 20)
+        self.blacklist = ['#']
     
     def __call__(self, num: int) -> str:
         """获取并验证玩家昵称
@@ -74,23 +77,29 @@ class GetName:
         """
         while True:
             name = yinput(f"玩家{num}\n请输入昵称！")
-            
-            # 检查名称长度
-            if len(name) > 1:
-                pass  # 长度符合要求，继续处理
-            elif name == 'y':
-                name = 'yuning'  # 快捷输入支持
-            else:
-                yinput("名字不能为一个字")
+            if name in self.fast_name:
+                name = self.fast_name[name]
+
+            if not self.lenth_limit[0] <= len(name) <= self.lenth_limit[1]:
+                yinput(f'名字字数应为{self.lenth_limit[0]}到{self.lenth_limit[1]}')
                 continue  # 长度不符合要求，重新输入
-            
-            # 检查名称重复（如果不允许重复）
-            if not self.is_seam_name_allowed and name in self.names:
-                yinput("不允许重名")
-                continue  # 名称已存在，重新输入
-            
-            # 名称验证通过
-            self.names.append(name)  # 将名称添加到已使用列表
+            alowed = True
+            for i in self.blacklist:
+                if i in name:
+                    yinput(f"禁止使用{' '.join(self.blacklist)}")
+                    alowed = False
+                    break
+            if not alowed:
+                continue
+            if name in self.names:
+                if self.is_seam_name_allowed:
+                    self.names[name] += 1
+                    name += f'#{self.names[name]}'
+                else:
+                    yinput("不允许重名")
+                    continue  # 名称已存在，重新输入
+            else:
+                self.names[name] = 1
             break
             
         return name
