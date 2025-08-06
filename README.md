@@ -31,17 +31,17 @@ basic.namespace = globals()
 basic.input_act['exit'] = sys.exit
 
 # 获取玩家名称
-player_name = getname(1)
+name = getname(1)
 
 opt1 = Ochoice('basic', [(MD, 'font')], 'font', ['', 'vivo', 'mi', 'samsung'])
 @opt1.register_condition()
 def cdt1():
     return not basic.is_equal_width_font
 
-opt2 = Ostr('name', limit=(1, 16))
+opt2 = Ostr('名字', limit=(1, 16))
 @opt2.register_constraction()
 def cst1():
-    return f'当前名称: "{player_name}"'
+    return f'当前名称: "{name}"'
 
 st1 = Setting('显示设置').add(
     Obool('basic', [(MD, 'is_equal_width_font')], '等宽字体'),

@@ -1,7 +1,7 @@
 from typing import List, Generator, Union
 
 import basic
-
+from basic import FULL_WIDTH_CHAR_RANGE, CHAR_WIDTH_MAPS, CHINESE_CHAR_RANGE
 
 class UI:
     """用户界面类，用于构建和显示格式化的控制台界面
@@ -263,7 +263,7 @@ def _display_width_of_equal_width_font(text: str) -> int:
     width = 0
     for char in text:
         # 检查字符是否属于全角字符范围
-        if is_in_range(char, basic.FULL_WIDTH_CHAR_RANGE):
+        if is_in_range(char, FULL_WIDTH_CHAR_RANGE):
             width += 100
         else:
             width += 50
@@ -281,10 +281,9 @@ def _display_width_of_non_equal_width_font(text: str) -> int:
     width = 0
     for char in text:
         # 检查是否在映射表中
-        if char in basic.CHAR_WIDTH_MAPS[basic.font]:
-            width += basic.CHAR_WIDTH_MAPS[basic.font].get(char,
-                                                           100 if is_in_range(char, basic.CHINESE_CHAR_RANGE)
-                                                           else 50)
+        width += CHAR_WIDTH_MAPS[basic.font].get(char,
+                                                 100 if is_in_range(char, CHINESE_CHAR_RANGE)
+                                                 else 50)
     return width
 
 def bar(val: float, max_: float, lenth: int = 8, empty: str ='.', full: str = '#') -> str:
