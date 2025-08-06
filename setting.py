@@ -241,7 +241,7 @@ class Ochoice(Option):
         Returns:
             格式化的可选值列表，如 ["1: 选项A", "2: 选项B"]
         """
-        return [f"{i+1}: {name}" for i, (name, val) in enumerate(self.choices.items())]
+        return [f"{name}" for i, (name, val) in enumerate(self.choices.items())]
 
 class Ostr(Option):
     """字符串类型配置项"""
