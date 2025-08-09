@@ -206,7 +206,46 @@ def roman_numerals(num):
         i += 1
     return roman_num
 
-def english_numerals(num):
+def chniese_numerals(num):
+    """将阿拉伯数字转换为中文数字
+
+    Args:
+        num: 要转换的阿拉伯数字
+
+    Returns:
+        对应的中文数字字符串
+    """
+    if num == 0:
+        return '零'
+    if num < 0:
+        negative = True
+        num = -num
+    else:
+        negative = False
+
+    units = ['', '十', '百', '千']
+    units2 = ['', '万', '亿', '兆']
+    digits = '零一二三四五六七八九'
+
+    num = str(num)
+    cnt = 0
+    result = ''
+    for i in num[::-1]:
+        if cnt % 4 == 0:
+            result += units2[cnt // 4]
+        if i != '0':
+            result += units[cnt % 4] + digits[int(i)]
+        elif result and result[-1] != '零':
+            result += '零'
+        cnt += 1
+    result = result[::-1].rstrip('零')  # 反转并去掉末尾的零
+    if len(result) >= 2 and result[:2] == '一十':
+        result = result[1:]
+    if negative:
+        result = '负' + result
+    return result
+
+def english_unit_numerals(num):
     """将阿拉伯数字转换为英文数字
 
     Args:
@@ -228,7 +267,7 @@ def english_numerals(num):
             break
     return result.strip()
 
-def chniese_numerals(num):
+def chniese_unit_numerals(num):
     """将阿拉伯数字转换为使用中文单位数字
     Args:
         num: 要转换的阿拉伯数字
