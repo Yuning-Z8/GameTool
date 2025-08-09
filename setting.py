@@ -220,7 +220,7 @@ class Ochoice(Option):
         try:
             if value is None:
                 # 没有提供值时，显示选项列表供用户选择
-                value = yinput(UI().text('从以下值选择').choice(self.get_choice_display()).flush())
+                value = yinput(UI().text('从以下值选择').choice(self.get_choice_display(), addnum=False).flush())
             # 尝试按编号设置
             if isinstance(value, str) and value.isdigit():
                 idx = int(value) - 1
@@ -241,7 +241,7 @@ class Ochoice(Option):
         Returns:
             格式化的可选值列表，如 ["1: 选项A", "2: 选项B"]
         """
-        return [f"{name}" for i, (name, val) in enumerate(self.choices.items())]
+        return [f"{i+1}: {name}" for i, (name, val) in enumerate(self.choices.items())]
 
 class Ostr(Option):
     """字符串类型配置项"""
