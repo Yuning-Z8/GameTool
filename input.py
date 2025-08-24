@@ -1,6 +1,23 @@
 import basic
 
 
+def clean(lines: int | None = None) -> None:
+    """清除终端内容
+    
+    Args:
+        lines: 要清除的行数，如果为None则清除整个屏幕
+    """
+    if lines is None:
+        # 清除整个屏幕并将光标移至左上角
+        print('\033[2J\033[H', end='', flush=True)
+    else:
+        # 清除指定行数（从当前位置向上）
+        for _ in range(lines):
+            # 上移一行 -> 清除整行 -> 保持在当前行首
+            print('\033[F\033[2K', end='', flush=True)
+        # 清除完成后将光标移至正确位置
+        print('\033[E' * (lines - 1), end='', flush=True)
+
 def yinput(prompt: str) -> str:
     """带指令控制的输入函数
     
@@ -16,7 +33,7 @@ def yinput(prompt: str) -> str:
         basic.input_act[user_input]()
     return user_input
 
-def intinput(prompt: str, max_: int = 20, min_: int = 0) -> int:
+def intinput(prompt: str, max_: int = 20, min_: int = 0, secret: bool = False) -> int:
     """获取一个在指定范围内的整数输入
     
     Args:
@@ -35,6 +52,8 @@ def intinput(prompt: str, max_: int = 20, min_: int = 0) -> int:
     while True:
         try:
             a = yinput(prompt)
+            if secret:
+                clean(prompt.count('\n') + 1)
             a = int(a)  # 尝试将输入转换为整数
             if min_ <= a <= max_: 
                 return a  # 输入有效，返回整数
@@ -43,6 +62,8 @@ def intinput(prompt: str, max_: int = 20, min_: int = 0) -> int:
         except ValueError:
             # 处理无效输入（非整数或超出范围）
             yinput('请输入有效数字！')
+            if secret:
+                clean(1)
 
 class GetName:
     """获取玩家昵称的类
