@@ -45,14 +45,14 @@ def cmdinput(prompt: str, commands: Dict[str, Dict[str, Any]]) -> Any:
                 'params': {
                     'param_name': {
                         'type': 类型,  # int, float, str, bool等
-                        'default': 默认值,  # 可选
+                        'default': 默认值,  # 可选, 没有表示必需
                         'help': '参数说明'
                     },
                     ...
                 },
                 'help': '命令说明',
-                'accepts_args': str,  # 是否接受*args和帮助信息
-                'accepts_kwargs': str  # 是否接受**kwargs和帮助信息
+                'accepts_args': str,  # *args的帮助信息, 没有表示不接受
+                'accepts_kwargs': str  # **kwargs的帮助信息, 没有表示不接受
             }
         }
         

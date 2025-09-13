@@ -105,6 +105,7 @@ input_act: Dict[str, Callable[[], Any]] = {}
 
 # setting配置
 namespace = globals()  # 获取当前全局符号表
+list_show_length = 3
 
 
 # number配置

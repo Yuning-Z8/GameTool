@@ -1,11 +1,11 @@
 import functools
 import sys
-from typing import List, Dict, Tuple, Callable, Any, Literal, Union
+from typing import List, Dict, Tuple, Callable, Any, Literal, Union, Optional
 
 import basic
 from basic import DL, CL, MD
 from ui import UI
-from input import yinput
+from input import yinput, cmdinput
 
 
 class Option:
@@ -284,6 +284,233 @@ class Ostr(Option):
     def value_name(self) -> str:
         """返回字符串值的显示形式"""
         return self.value()
+
+class Olist(Option):
+    """列表类型配置项，集成二级界面编辑功能"""
+    
+    def __init__(self, name: str, path: Optional[List[Tuple]] = None, 
+                 optname: Optional[str] = None, constraction: Optional[str] = None,
+                 item_type: type = str, min_length: int = 0, 
+                 max_length: Optional[int] = None, item_validator: Optional[Callable] = None):
+        """
+        初始化列表配置项
+        
+        参数:
+            name: 配置项名称
+            path: 访问路径
+            optname: 显示名称
+            constraction: 说明文本
+            item_type: 列表项类型
+            min_length: 最小长度限制
+            max_length: 最大长度限制
+            item_validator: 列表项验证函数
+        """
+        super().__init__(name, path, optname, constraction, (min_length, max_length))
+        self.item_type = item_type
+        self.item_validator = item_validator or (lambda x: True)
+    
+    def value(self) -> List:
+        """获取列表值"""
+        return super().value() or []
+    
+    def value_set(self, value: Optional[List] = None) -> None:
+        """设置列表值，并进行验证"""
+        if value is None:
+            value = self._display_editor_interface()
+
+        if not isinstance(value, list):
+            raise ValueError("必须是一个列表")
+        
+        # 验证长度限制
+        min_len, max_len = self.limit
+        if len(value) < min_len:
+            raise ValueError(f"列表长度不能少于 {min_len}")
+        if max_len is not None and len(value) > max_len:
+            raise ValueError(f"列表长度不能超过 {max_len}")
+        
+        # 验证元素类型和内容
+        validated_list = []
+        for i, item in enumerate(value):
+            # 尝试类型转换
+            try:
+                converted_item = self.item_type(item)
+            except (ValueError, TypeError):
+                raise ValueError(f"第 {i+1} 个元素无法转换为 {self.item_type.__name__} 类型")
+            
+            # 验证元素内容
+            if not self.item_validator(converted_item):
+                raise ValueError(f"第 {i+1} 个元素 '{converted_item}' 不符合要求")
+            
+            validated_list.append(converted_item)
+        
+        super().value_set(validated_list)
+    
+    def value_name(self) -> str:
+        """返回列表的显示格式 [value,...]"""
+        items = self.value()
+        if not items:
+            return "[]"
+        
+        # 限制显示的项目数量，避免过长
+        display_items = items[:basic.list_show_length]
+        display_str = ", ".join(str(item) for item in display_items)
+        
+        if len(items) > basic.list_show_length:
+            display_str += f", ...(+{len(items)-basic.list_show_length})"
+        
+        return f"[{display_str}]"
+    
+    def add_item(self, value, index: Optional[int] = None):
+        """添加项目到列表
+        
+        参数:
+            value: 要添加的值
+            index: 插入位置，None表示添加到末尾
+        """
+        current_list = self.value()
+        if index is None or index >= len(current_list):
+            current_list.append(value)
+        else:
+            current_list.insert(index, value)
+        self.value_set(current_list)
+    
+    def remove_item(self, index: int):
+        """移除指定索引的项目
+        
+        参数:
+            index: 要移除的项目索引
+        """
+        current_list = self.value()
+        if 0 <= index < len(current_list):
+            current_list.pop(index)
+            self.value_set(current_list)
+        else:
+            raise IndexError(f"索引 {index} 超出范围 (0-{len(current_list)-1})")
+    
+    def update_item(self, index: int, value):
+        """更新指定索引的项目
+        
+        参数:
+            index: 要更新的项目索引
+            value: 新值
+        """
+        current_list = self.value()
+        if 0 <= index < len(current_list):
+            # 转换和验证值
+            try:
+                converted_value = self.item_type(value)
+            except (ValueError, TypeError):
+                raise ValueError(f"值 '{value}' 无法转换为 {self.item_type.__name__} 类型")
+            
+            if not self.item_validator(converted_value):
+                raise ValueError(f"值 '{converted_value}' 不符合要求")
+            
+            current_list[index] = converted_value
+            self.value_set(current_list)
+        else:
+            raise IndexError(f"索引 {index} 超出范围 (0-{len(current_list)-1})")
+    
+    def _display_editor_interface(self):
+        """显示列表编辑界面"""
+        commands = {
+            'add': {
+                'func': self.add_item,
+                'params': {
+                    'value': {
+                        'type': str,
+                        'help': '要添加的值'
+                    },
+                    'index': {
+                        'type': int,
+                        'help': '插入位置(可选)',
+                        'default': None,
+                        'optional': True
+                    }
+                },
+                'help': '添加新项目'
+            },
+            'del': {
+                'func': self.remove_item,
+                'params': {
+                    'index': {
+                        'type': int,
+                        'help': '要删除的项目索引'
+                    }
+                },
+                'help': '删除指定索引的项目'
+            },
+            'set': {
+                'func': self.update_item,
+                'params': {
+                    'index': {
+                        'type': int,
+                        'help': '要更新的项目索引'
+                    },
+                    'value': {
+                        'type': str,
+                        'help': '新的值'
+                    }
+                },
+                'help': '更新指定索引的项目值'
+            },
+            'back': {
+                'func': lambda: 'back',
+                'help': '保存并返回上级菜单'
+            },
+        }
+
+        while True:
+            ui = (UI()
+                  .center_text(self.optname, '=')
+                  .split_text("索引", "值"))
+            
+            # 显示列表内容
+            current_list = self.value()
+            for i, item in enumerate(current_list):
+                ui = ui.split_text(str(i), item)
+            ui.line('-')
+            ui.text(f"列表长度: {len(current_list)}")
+            if self.limit[1] is not None:
+                ui.text(f"最大允许长度: {self.limit[1]}")
+            
+            result = cmdinput(ui.flush(), commands)
+            
+            if result == 'back':
+                break
+    
+    def __str__(self) -> str:
+        """返回配置项的显示名称和当前值"""
+        return f"{self.optname}: {self.value_name()}"
+    
+    def get_item_count(self) -> int:
+        """获取列表项数量"""
+        return len(self.value())
+    
+    def clear(self):
+        """清空列表"""
+        self.value_set([])
+    
+    def extend(self, items: List):
+        """扩展列表"""
+        current = self.value()
+        current.extend(items)
+        self.value_set(current)
+    
+    def find_indices(self, value) -> List[int]:
+        """查找值的所有索引位置"""
+        current = self.value()
+        return [i for i, item in enumerate(current) if item == value]
+    
+    def contains(self, value) -> bool:
+        """检查列表是否包含指定值"""
+        return value in self.value()
+    
+    def sort(self, key=None, reverse=False):
+        """对列表进行排序"""
+        current = self.value()
+        current.sort(key=key, reverse=reverse)
+        self.value_set(current)
+
 
 class Setting:
     """设置菜单类，用于管理一组配置项
