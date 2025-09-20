@@ -1,5 +1,5 @@
-import basic
-from typing import Callable, Any, Dict, List, Union
+from . import basic
+from typing import Any, Dict, List
 
 
 def clean(lines: int | None = None) -> None:

@@ -43,7 +43,7 @@ class EventManager:
                 # 如果返回非零，则重新安排任务
                 if next_time:
                     # 确保下次执行时间不早于当前时间戳
-                    next_time = max(next_time, timestamp)
+                    next_time = max(next_time, timestamp + 0.05)
                     self.schedule_task(next_time, task)
     
     def trigger_event(self, event_name: str, event_info = None) -> None:
@@ -58,7 +58,7 @@ class EventManager:
             for monitor in self.event_listeners[event_name].copy():
                 monitor[0](event_info)
                 # 如果是非持久监听器，触发后移除
-                if monitor[1]:
+                if not monitor[1]:
                     self.event_listeners[event_name].remove(monitor)
 
     def add_act(self, func: Callable[[], bool]):

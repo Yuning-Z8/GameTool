@@ -1,6 +1,6 @@
 from typing import Literal, Dict, List
 
-import basic
+from . import basic
 
 
 def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal['en', 'zh1', 'zh2'], List[str]], unit_map: List[str], conversion_factors: Dict[str, float], display_thresholds: Dict[str, List[float]], depth: int = 1) -> str:
@@ -23,20 +23,45 @@ def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal[
     """
     value *= conversion_factors[value_unit]
     unit_ = None
-    ndigits = 0
+    
+    # 选择合适的单位
     for unit in display_thresholds:
-        if value > display_thresholds[unit][0]:
+        if value >= display_thresholds[unit][0]:
             continue
         unit_ = unit
         break
+        
     if unit_ is None:
         unit_ = unit_map[-1]
+        
     if depth == 1:
-        for i in range(len(display_thresholds[unit_])):
-            if value > display_thresholds[unit_][i]:
+        # 确定小数位数
+        thresholds = display_thresholds[unit_]
+        ndigits = 0  # 默认保留0位小数
+        
+        # 从第二个阈值开始检查（第一个是单位切换阈值）
+        for i in range(1, len(thresholds)):
+            if value >= thresholds[i]:
+                ndigits = i - 1  # 第i个阈值对应i-1位小数
                 break
-        ndigits = i # type: ignore
-        return f'{round(value / conversion_factors[unit_], ndigits):g}{units[basic.unit_type][unit_map.index(unit_)]}' # type: ignore
+        else:
+            # 如果没有找到满足条件的阈值，使用最大小数位数
+            ndigits = len(thresholds) - 1
+            
+        # 计算转换后的值
+        converted_value = value / conversion_factors[unit_]
+        
+        # 四舍五入到指定小数位数
+        if ndigits == 0:
+            formatted_value = round(converted_value)
+        else:
+            formatted_value = round(converted_value, ndigits)
+            
+        # 去掉不必要的.0
+        if formatted_value.is_integer():
+            formatted_value = int(formatted_value)
+            
+        return f'{formatted_value}{units[basic.unit_type][unit_map.index(unit_)]}'
     else:
         results = []
         remaining_value = value
@@ -49,18 +74,39 @@ def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal[
             current_unit = unit_map[current_unit_idx]
             current_factor = conversion_factors[current_unit]
             
+            # 计算当前单位的整数值
             amount = remaining_value // current_factor
             
             if amount > 0:
-                results.append(f"{amount}{units[basic.unit_type][current_unit_idx]}")
+                # 直接使用整数部分
+                results.append(f"{int(amount)}{units[basic.unit_type][current_unit_idx]}")
+                remaining_value -= amount * current_factor
             else:
-                for j in range(len(display_thresholds[unit_map[current_unit_idx]])):
-                    if remaining_value > display_thresholds[unit_map[current_unit_idx]][j]:
-                        break
-                ndigits = j # type: ignore
-                results.append(f"{round(remaining_value / current_factor, ndigits):g}{units[basic.unit_type][current_unit_idx]}")
+                # 对于小数部分，确定小数位数
+                thresholds = display_thresholds[current_unit]
+                ndigits = 0  # 默认保留0位小数
                 
-            remaining_value -= amount * current_factor
+                # 从第二个阈值开始检查
+                for j in range(1, len(thresholds)):
+                    if remaining_value >= thresholds[j]:
+                        ndigits = j - 1  # 第j个阈值对应j-1位小数
+                        break
+                else:
+                    # 如果没有找到满足条件的阈值，使用最大小数位数
+                    ndigits = len(thresholds) - 1
+                    
+                # 计算并格式化小数部分
+                if ndigits == 0:
+                    formatted_value = round(remaining_value / current_factor)
+                else:
+                    formatted_value = round(remaining_value / current_factor, ndigits)
+                    
+                if formatted_value.is_integer():
+                    formatted_value = int(formatted_value)
+                    
+                results.append(f"{formatted_value}{units[basic.unit_type][current_unit_idx]}")
+                remaining_value = 0  # 小数部分处理完后，剩余值为0
+                
             current_unit_idx -= 1
 
         return ' '.join(results) if results else f"0{units[basic.unit_type][unit_map.index(unit_)]}"
@@ -206,7 +252,7 @@ def roman_numerals(num):
         i += 1
     return roman_num
 
-def chniese_numerals(num):
+def chinese_numerals(num):
     """将阿拉伯数字转换为中文数字
 
     Args:
@@ -267,7 +313,7 @@ def english_unit_numerals(num):
             break
     return result.strip()
 
-def chniese_unit_numerals(num):
+def chinese_unit_numerals(num):
     """将阿拉伯数字转换为使用中文单位数字
     Args:
         num: 要转换的阿拉伯数字

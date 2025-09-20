@@ -1,7 +1,7 @@
 from typing import List, Generator, Union
 
-import basic
-from basic import FULL_WIDTH_CHAR_RANGE, CHAR_WIDTH_MAPS, CHINESE_CHAR_RANGE
+from . import basic
+from .basic import FULL_WIDTH_CHAR_RANGE, CHAR_WIDTH_MAPS, CHINESE_CHAR_RANGE
 
 class UI:
     """用户界面类，用于构建和显示格式化的控制台界面

@@ -2,10 +2,10 @@ import functools
 import sys
 from typing import List, Dict, Tuple, Callable, Any, Literal, Union, Optional
 
-import basic
-from basic import DL, CL, MD
-from ui import UI
-from input import yinput, cmdinput
+from . import basic
+from .basic import DL, CL, MD
+from .ui import UI
+from .input import yinput, cmdinput
 
 
 class Option:
