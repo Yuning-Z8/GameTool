@@ -1,6 +1,8 @@
 from . import basic
 from .basic import DL, CL, MD
 from .event import EventManager
+from .value import PathResolver
+from .cmd import CommandParser, infer_command_info, CommandInfo, parse_google_docstring
 from .input import yinput, intinput, cmdinput, clean, getname, GetName
 from .ui import UI, bar
 from .setting import Obool, Ochoice, Oint, Olist, Ostr, Setting, Option
@@ -10,6 +12,8 @@ from .other import IDPool
 __all__ = [
     'basic', 'DL', 'CL', 'MD',  # 从basic导入的内容
     'EventManager',              # 从event导入的内容
+    'PathResolver',              # 从value导入的内容
+    'CommandParser', 'infer_command_info',  # 从cmd导入的内容
     'yinput', 'intinput', 'cmdinput', 'clean', 'getname',  # 从input导入的内容
     'UI', 'bar',                 # 从ui导入的内容
     'Obool', 'Ochoice', 'Oint', 'Olist', 'Ostr', 'Setting',  # 从setting导入的内容
