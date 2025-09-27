@@ -3,6 +3,7 @@ import inspect
 from typing import Dict, Callable, Type, Any, Optional, List, Tuple, TypedDict, get_type_hints
 
 from .value import PathResolver
+from .expections import NotACommand, ParamError
 
 
 # 1. 参数信息层
@@ -224,7 +225,7 @@ class CommandParser:
         real_cmd = self.resolve_command(cmd_name)
         
         if real_cmd not in self.commands:
-            raise ValueError(f"未知命令: {cmd_name}")
+            raise NotACommand(f"未知命令: {cmd_name}")
             
         cmd_info = self.commands[real_cmd]
         print(f"命令: {real_cmd}")
@@ -373,11 +374,11 @@ class CommandParser:
             cmd = self.resolve_command(cmd)
         else:
             # 如果第一个 token 是字典（key=value），则不是命令
-            raise ValueError('不是命令')
+            raise NotACommand('不是命令')
         
         # 处理命令
         if cmd not in self.commands:
-            raise ValueError('不是命令')
+            raise NotACommand('不是命令')
         
         cmd_info = self.commands[cmd]
         func = cmd_info['func']
@@ -451,7 +452,7 @@ class CommandParser:
                 # 这是 key=value 格式的参数
                 for k, v in arg.items():
                     if k in keyword_args_input:
-                        raise ValueError(f"参数 {k} 被多次指定")
+                        raise ParamError(f"参数 {k} 被多次指定")
                     keyword_args_input[k] = v
             else:
                 positional_args.append(arg)
@@ -465,7 +466,7 @@ class CommandParser:
                 # 如果是**kwargs参数，直接存储为字符串
                 keyword_args[param_name] = param_value
             else:
-                raise ValueError(f"未知参数: {param_name}")
+                raise ParamError(f"未知参数: {param_name}")
         
         # 第二步：处理位置参数，分配给未指定的命名参数
         # 确定哪些命名参数可以被位置参数指定
@@ -485,12 +486,12 @@ class CommandParser:
                 # 如果是*args参数，尝试进行类型转换
                 args_list.append(try_convert_type(arg_value))
             else:
-                raise ValueError(f"参数过多，最多支持 {len(positionable_params)} 个位置参数")
+                raise ParamError(f"参数过多，最多支持 {len(positionable_params)} 个位置参数")
         
         # 检查必需参数（只检查命名参数，*args参数不参与必需性检查）
         for param_name, param_info in params_info.items():
             if not param_info['optional'] and param_name not in kwargs:
-                raise ValueError(f"缺少必需参数: {param_name}")
+                raise ParamError(f"缺少必需参数: {param_name}")
         
         # 执行命令函数
         merged_kwargs = {**kwargs, **keyword_args}
@@ -612,7 +613,7 @@ class CommandParser:
             ValueError: 当命令不存在时
         """
         if command_name not in self.commands:
-            raise ValueError(f"命令 '{command_name}' 不存在")
+            raise NotACommand(f"命令 '{command_name}' 不存在")
             
         # 移除所有指向该命令的别名
         aliases_to_remove = [
