@@ -12,12 +12,11 @@ def clean(lines: int | None = None) -> None:
         # 清除整个屏幕并将光标移至左上角
         print('\033[2J\033[H', end='', flush=True)
     else:
-        # 清除指定行数（从当前位置向上）
-        for _ in range(lines):
-            # 上移一行 -> 清除整行 -> 保持在当前行首
-            print('\033[F\033[2K', end='', flush=True)
-        # 清除完成后将光标移至正确位置
-        print('\033[E' * (lines - 1), end='', flush=True)
+        # 1. 移动光标到被清除区域的顶部
+        # 先上移lines行（到达要清除的第一行）
+        print(f'\033[{lines}A', end='', flush=True)
+        # 2. 清除从当前位置（顶部）到下方的内容（包含lines行）
+        print('\033[0J', end='', flush=True)
 
 def yinput(prompt: str) -> str:
     """带指令控制的输入函数
