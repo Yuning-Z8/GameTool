@@ -1,4 +1,5 @@
 from typing import Dict, Literal, Callable, Any
+import re
 
 
 # 全局常量定义
@@ -83,6 +84,7 @@ FULL_WIDTH_CHAR_RANGE = CHINESE_CHAR_RANGE + [
     (0x1F600, 0x1F64F),  # Emoji表情(面部表情、手势等)
     (0x1F680, 0x1F6FF),  # 交通和地图符号(如汽车、飞机等)
 ]
+ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
 
 # setting
 DL = 'dictlike'  # 字典类型的标识符
@@ -110,14 +112,3 @@ list_show_length = 3
 
 # number配置
 unit_type: Literal['en', 'zh1', 'zh2'] = 'zh1'
-
-
-
-
-class GameOver(Exception):
-    """游戏结束异常，用于终止游戏循环"""
-    pass
-
-class PermissionDenied(Exception):
-    """权限拒绝异常，表示操作未被授权"""
-    pass

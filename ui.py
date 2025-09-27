@@ -1,7 +1,139 @@
+import re
 from typing import List, Generator, Union
 
 from . import basic
-from .basic import FULL_WIDTH_CHAR_RANGE, CHAR_WIDTH_MAPS, CHINESE_CHAR_RANGE
+from .basic import FULL_WIDTH_CHAR_RANGE, CHAR_WIDTH_MAPS, CHINESE_CHAR_RANGE, ANSI_ESCAPE_RE
+
+
+class ANSI:
+    """ANSI转义序列类定义，新增offstyle类管理样式关闭选项"""
+    
+    # 前景非亮色（直接访问）
+    black = "\033[30m"
+    red = "\033[31m"
+    green = "\033[32m"
+    yellow = "\033[33m"
+    blue = "\033[34m"
+    magenta = "\033[35m"
+    cyan = "\033[36m"
+    white = "\033[37m"
+    
+    # 前景亮色
+    class fglight:
+        black = "\033[90m"
+        red = "\033[91m"
+        green = "\033[92m"
+        yellow = "\033[93m"
+        blue = "\033[94m"
+        magenta = "\033[95m"
+        cyan = "\033[96m"
+        white = "\033[97m"
+    
+    # 背景非亮色
+    class bg:
+        black = "\033[40m"
+        red = "\033[41m"
+        green = "\033[42m"
+        yellow = "\033[43m"
+        blue = "\033[44m"
+        magenta = "\033[45m"
+        cyan = "\033[46m"
+        white = "\033[47m"
+    
+    # 背景亮色
+    class bglight:
+        black = "\033[100m"
+        red = "\033[101m"
+        green = "\033[102m"
+        yellow = "\033[103m"
+        blue = "\033[104m"
+        magenta = "\033[105m"
+        cyan = "\033[106m"
+        white = "\033[107m"
+    
+    # 文本样式（开启）
+    class style:
+        bold = "\033[1m"        # 加粗
+        dim = "\033[2m"         # 暗淡
+        italic = "\033[3m"      # 斜体
+        underline = "\033[4m"   # 下划线
+        blink = "\033[5m"       # 闪烁
+        invert = "\033[7m"      # 前景/背景互换
+        hidden = "\033[8m"      # 隐藏
+        strikethrough = "\033[9m"  # 删除线
+    
+        # 文本样式（关闭）
+        class off:
+            bold = "\033[21m"       # 关闭加粗
+            dim = "\033[22m"        # 关闭暗淡
+            italic = "\033[23m"     # 关闭斜体
+            underline = "\033[24m"  # 关闭下划线
+            blink = "\033[25m"      # 关闭闪烁
+            invert = "\033[27m"     # 关闭前景/背景互换
+            hidden = "\033[28m"     # 关闭隐藏
+            strikethrough = "\033[29m"  # 关闭删除线
+    
+    class cursor:
+        """光标控制"""
+        up = lambda n=1: f"\033[{n}A"       # 上移n行
+        down = lambda n=1: f"\033[{n}B"     # 下移n行
+        right = lambda n=1: f"\033[{n}C"    # 右移n列
+        left = lambda n=1: f"\033[{n}D"     # 左移n列
+        home = "\033[H"                     # 移动到左上角
+        position = lambda x, y: f"\033[{y};{x}H"  # 移动到(x,y)位置
+        save = "\033[s"                     # 保存光标位置
+        restore = "\033[u"                  # 恢复光标位置
+    
+    class screen:
+        """屏幕控制"""
+        clear = "\033[2J"                   # 清屏
+        clear_line = "\033[K"               # 清除当前行
+        clear_to_end = "\033[0J"            # 清除从光标到屏幕结尾
+        clear_to_start = "\033[1J"          # 清除从光标到屏幕开头
+
+    class preset:
+        @property
+        def success(self):
+            return ANSI.combine(ANSI.green, ANSI.style.bold)
+
+        @property
+        def error(self):
+            return ANSI.combine(ANSI.red, ANSI.style.bold)
+
+        @property
+        def warning(self):
+            return ANSI.combine(ANSI.yellow)
+
+        @property
+        def info(self):
+            return ANSI.combine(ANSI.blue)
+
+        @property
+        def highlight(self):
+            return ANSI.combine(ANSI.style.invert, ANSI.style.bold)
+
+        @property
+        def debug(self):
+            return ANSI.combine(ANSI.fglight.black)
+    
+    # 全局重置（清除所有样式）
+    reset = "\033[0m"
+
+    class rgb:
+        """8位RGB支持（r, g, b范围0-255）"""
+        @staticmethod
+        def fg(r: int, g: int, b: int) -> str:
+            return f"\033[38;2;{r};{g};{b}m"
+        
+        @staticmethod
+        def bg(r: int, g: int, b: int) -> str:
+            return f"\033[48;2;{r};{g};{b}m"
+
+    @staticmethod
+    def combine(*styles):
+        """组合多个样式为一个字符串"""
+        return ''.join(styles)
+
 
 class UI:
     """用户界面类，用于构建和显示格式化的控制台界面
@@ -167,21 +299,53 @@ class UI:
         Returns:
             分割后的文本块生成器
         """
+        # 先移除ANSI转义序列以计算实际显示宽度
+        clean_text = ANSI_ESCAPE_RE.sub('', text)
+        
+        # 跟踪ANSI转义序列的状态
+        ansi_state = ""
         current = []  # 当前正在构建的块
         current_width = 0  # 当前块的显示宽度
         
-        for char in text:
+        i = 0
+        while i < len(text):
+            char = text[i]
+            
+            # 检查是否开始ANSI转义序列
+            if char == '\x1b' and i + 1 < len(text) and text[i + 1] == '[':
+                # 提取完整的ANSI转义序列
+                j = i + 2
+                while j < len(text) and text[j] not in 'ABCDEFGHJKSTfm':
+                    j += 1
+                if j < len(text):
+                    ansi_seq = text[i:j+1]
+                    ansi_state = ansi_seq  # 保存当前ANSI状态
+                    current.append(ansi_seq)
+                    i = j + 1
+                    continue
+            
+            # 处理普通字符
             char_width = display_width(char)
             if current_width + char_width > length:  # 当前块已超过长度限制
                 if current:
+                    # 如果当前有活动的ANSI状态，确保在块结束时重置
+                    if ansi_state:
+                        current.append('\x1b[0m')
                     yield ''.join(current)
                     current = []
-                    current_width -= length
+                    # 如果有活动的ANSI状态，在新块开始时恢复
+                    if ansi_state:
+                        current.append(ansi_state)
+                    current_width = 0
                     
             current.append(char)
             current_width += char_width
+            i += 1
             
         if current:  # 添加最后一个块
+            # 如果有活动的ANSI状态，确保在文本结束时重置
+            if ansi_state:
+                current.append('\x1b[0m')
             current += ' ' * ((length - current_width) // display_width(' '))  # 用空格填充不足部分
             yield ''.join(current)
     
@@ -234,15 +398,18 @@ def is_in_range(char: str, range) -> bool:
             return True
     return False
 
+# 修改display_width函数
 def display_width(text: str) -> int:
     """计算字符串的实际显示宽度
     
     Args:
-        text: 要计算的字符串
+        text: 要计算的字符串，可以包含ANSI转义序列
         
     Returns:
-        字符串的显示宽度
+        字符串的显示宽度（不包括ANSI转义序列）
     """
+    # 移除ANSI转义序列后再计算宽度
+    text = ANSI_ESCAPE_RE.sub('', text)
     if basic.is_equal_width_font:
         return _display_width_of_equal_width_font(text)
     else:
