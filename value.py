@@ -15,7 +15,7 @@ class PathResolver:
     """
     
     @staticmethod
-    def get(obj: Any, path: Union[str, List[Union[str, int]]], default: Any = None) -> Any:
+    def get(obj: Any, path: Union[str, List], default: Any = None) -> Any:
         """
         通过路径获取对象中的值
         
@@ -36,7 +36,7 @@ class PathResolver:
             return default
     
     @staticmethod
-    def set(obj: Any, path: Union[str, List[Union[str, int]]], value: Any) -> bool:
+    def set(obj: Any, path: Union[str, List], value: Any) -> bool:
         """
         通过路径修改对象中的值
         
@@ -64,7 +64,7 @@ class PathResolver:
             return False
     
     @staticmethod
-    def _normalize_path(path: Union[str, List[Union[str, int]]]) -> Sequence[Union[str, int]]:
+    def _normalize_path(path: Union[str, List]) -> Sequence[Union[str, int]]:
         """将路径统一转换为列表形式"""
         if isinstance(path, str):
             return path.split('.')
@@ -74,7 +74,7 @@ class PathResolver:
             raise TypeError("路径必须是字符串或列表")
     
     @staticmethod
-    def _get_next(current: Any, part: Union[str, int]) -> Any:
+    def _get_next(current: Any, part: Any) -> Any:
         """获取当前对象的下一级对象"""
         # 整数直接作为索引处理（用于列表/元组）
         if isinstance(part, int):
@@ -95,7 +95,7 @@ class PathResolver:
         return getattr(current, part)
     
     @staticmethod
-    def _set_last(parent: Any, part: Union[str, int], value: Any) -> None:
+    def _set_last(parent: Any, part: Any, value: Any) -> None:
         """设置最后一级的值"""
         # 整数直接作为索引处理
         if isinstance(part, int):
