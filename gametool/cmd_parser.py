@@ -50,17 +50,17 @@ class ProcessedCommandInfo(TypedDict):
 
 class CommandParser:
     """命令解析器类，支持命令处理、别名和内置命令"""
-    
+
     def __init__(self, namespace: Dict = {}):
         """初始化命令解析器
-        
+
         Args:
             namespace: 变量解析的命名空间
         """
         self.namespace = namespace
         self.commands: Dict[str, ProcessedCommandInfo] = {}
         self.aliases: Dict[str, str] = {}  # 别名映射: {'alias': 'real_command'}
-        
+
         # 添加内置命令
         self._add_builtin_commands()
 
@@ -82,7 +82,7 @@ class CommandParser:
         self.commands['help'] = self._process_command_info(help_info)
         # 为help命令添加别名
         self.aliases.update({'?': 'help', 'h': 'help'})
-        
+
         # raw命令 - 返回原始输入
         raw_info: CommandInfo = {
             'func': self._cmd_raw,
@@ -92,7 +92,7 @@ class CommandParser:
         self.commands['raw'] = self._process_command_info(raw_info)
         # 为raw命令添加别名
         self.aliases['r'] = 'raw'
-        
+
         # alias命令 - 添加别名
         alias_info: CommandInfo = {
             'func': self._cmd_alias,
@@ -111,7 +111,7 @@ class CommandParser:
         self.commands['alias'] = self._process_command_info(alias_info)
         # 为alias命令添加别名
         self.aliases['a'] = 'alias'
-        
+
         # unalias命令 - 移除别名
         unalias_info: CommandInfo = {
             'func': self._cmd_unalias,
@@ -126,13 +126,13 @@ class CommandParser:
         self.commands['unalias'] = self._process_command_info(unalias_info)
         # 为unalias命令添加别名
         self.aliases['ua'] = 'unalias'
- 
+
     def _cmd_help(self, command: Optional[str] = None) -> None:
         """内置help命令实现
-        
+
         Args:
             command: 要查看帮助的特定命令
-            
+
         Raises:
             ValueError: 当命令不存在时
         """
@@ -140,97 +140,97 @@ class CommandParser:
             self._show_command_list()
         else:
             self._show_command_help(command)
-    
+
     def _cmd_raw(self, *args: str) -> str:
         """内置raw命令实现
-        
+
         Args:
             text: 要返回的原始文本
-            
+
         Returns:
             原始文本
         """
         return ' '.join(args)
-    
+
     def _cmd_alias(self, alias: str, command: str) -> None:
         """内置alias命令实现
-        
+
         Args:
             alias: 要添加的别名
             command: 别名指向的命令
-            
+
         Raises:
             ValueError: 当命令不存在或别名已存在时
         """
         if command not in self.commands:
             raise ValueError(f"命令 '{command}' 不存在")
-        
+
         if alias in self.aliases:
             raise ValueError(f"别名 '{alias}' 已存在")
-        
+
         if alias in self.commands:
             raise ValueError(f"'{alias}' 已经是命令名称，不能作为别名")
-        
+
         self.aliases[alias] = command
         print(f"已添加别名: {alias} -> {command}")
-    
+
     def _cmd_unalias(self, alias: str) -> None:
         """内置unalias命令实现
-        
+
         Args:
             alias: 要移除的别名
-            
+
         Raises:
             ValueError: 当别名不存在时
         """
         if alias not in self.aliases:
             raise ValueError(f"别名 '{alias}' 不存在")
-        
+
         del self.aliases[alias]
         print(f"已移除别名: {alias}")
-    
+
     def resolve_command(self, command: str) -> str:
         """解析命令别名
-        
+
         Args:
             command: 输入的命令名称
-            
+
         Returns:
             解析后的实际命令名称
         """
         return self.aliases.get(command, command)
-    
+
     def _show_command_list(self) -> None:
         """显示所有可用命令的帮助信息"""
         print("可用命令:")
         for cmd_name, cmd_info in self.commands.items():
             print(f"{cmd_name} {cmd_info['short_help']}")
-        
+
         # 显示别名信息
         if self.aliases:
             print("\n别名:")
             for alias, real_cmd in self.aliases.items():
                 print(f"  {alias} -> {real_cmd}")
-    
+
     def _show_command_help(self, cmd_name: str) -> None:
         """显示特定命令的详细帮助信息
-        
+
         Args:
             cmd_name: 命令名称
-            
+
         Raises:
             ValueError: 当命令不存在时
         """
         # 解析别名
         real_cmd = self.resolve_command(cmd_name)
-        
+
         if real_cmd not in self.commands:
             raise NotACommand(f"未知命令: {cmd_name}")
-            
+
         cmd_info = self.commands[real_cmd]
         print(f"命令: {real_cmd}")
         print(f"说明: {cmd_info.get('help', '无说明')}")
-        
+
         if 'params' in cmd_info:
             print("参数:")
             for param_name, param_info in cmd_info['params'].items():
@@ -241,7 +241,7 @@ class CommandParser:
                 print(f"  {param_name}: {param_type.__name__} {'(可选)' if optional else '(必需)'}")
                 print(f"    默认值: {default}")
                 print(f"    说明: {param_help}")
-        
+
         # 显示*args和**kwargs信息
         if 'accepts_args' in cmd_info:
             print(f"  *args: {cmd_info['accepts_args']}")
@@ -250,10 +250,10 @@ class CommandParser:
 
     def _tokenize_input(self, user_input: str) -> List[Any]:
         """将用户输入分割为 tokens，处理引号、转义字符、变量替换和 key=value 格式
-        
+
         Args:
             user_input: 用户输入的字符串
-            
+
         Returns:
             分割后的 tokens 列表，包含字符串和字典（用于 key=value 格式）
         """
@@ -274,11 +274,11 @@ class CommandParser:
             else:
                 tokens.append(token_str)
             current_token = []
-        
+
         i = 0
         while i < len(user_input):
             char = user_input[i]
-            
+
             if escape_next:
                 # 处理转义字符
                 if char == 'n':
@@ -336,22 +336,22 @@ class CommandParser:
             else:
                 current_token.append(char)
                 i += 1
-        
+
         # 添加最后一个 token
         if current_token:
             finish_token()
-            
+
         return tokens
-    
+
     def parse(self, user_input: str) -> Any:
         """解析用户输入并执行相应命令
-        
+
         Args:
             user_input: 用户输入的字符串
-            
+
         Returns:
             则返回函数执行结果
-            
+
         Raises:
             ValueError: 当命令不存在或参数错误时
             TypeError: 当参数类型错误时
@@ -360,44 +360,44 @@ class CommandParser:
         # 检查是否是空输入
         if not user_input.strip():
             return None
-            
+
         # 使用新的 tokenize 方法
         tokens = self._tokenize_input(user_input.strip())
         if not tokens:
             return None
-            
+
         cmd = tokens[0]
         args = tokens[1:]
-        
+
         # 解析别名
         if isinstance(cmd, str):
             cmd = self.resolve_command(cmd)
         else:
             # 如果第一个 token 是字典（key=value），则不是命令
             raise NotACommand('不是命令')
-        
+
         # 处理命令
         if cmd not in self.commands:
             raise NotACommand('不是命令')
-        
+
         cmd_info = self.commands[cmd]
         func = cmd_info['func']
         params_info = cmd_info['params']
         param_names = list(params_info.keys())
         accepts_args = cmd_info['accepts_args']
         accepts_kwargs = cmd_info['accepts_kwargs']
-        
+
         def process_param(param_name: str, param_info: ProcessedParamInfo, arg_value: str) -> Any:
             """处理并转换参数值
-            
+
             Args:
                 param_name: 参数名称
                 param_info: 参数信息字典
                 arg_value: 参数值
-                
+
             Returns:
                 转换后的参数值
-                
+
             Raises:
                 TypeError: 当参数类型转换失败时
             """
@@ -418,10 +418,10 @@ class CommandParser:
 
         def try_convert_type(value: str) -> Any:
             """尝试将字符串值转换为合适的类型
-            
+
             Args:
                 value: 要转换的字符串值
-                
+
             Returns:
                 转换后的值
             """
@@ -442,11 +442,11 @@ class CommandParser:
         kwargs = {}  # 存储命名参数
         args_list = []  # 用于存储*args参数
         keyword_args = {}  # 用于存储**kwargs参数
-        
+
         # 分离关键字参数和位置参数
         keyword_args_input = {}
         positional_args = []
-        
+
         for arg in args:
             if isinstance(arg, dict):
                 # 这是 key=value 格式的参数
@@ -456,7 +456,7 @@ class CommandParser:
                     keyword_args_input[k] = v
             else:
                 positional_args.append(arg)
-        
+
         # 第一步：处理所有关键字参数
         for param_name, param_value in keyword_args_input.items():
             if param_name in params_info:
@@ -467,14 +467,14 @@ class CommandParser:
                 keyword_args[param_name] = param_value
             else:
                 raise ParamError(f"未知参数: {param_name}")
-        
+
         # 第二步：处理位置参数，分配给未指定的命名参数
         # 确定哪些命名参数可以被位置参数指定
         positionable_params = [
             param_name for param_name in param_names 
             if param_name not in kwargs and not params_info[param_name]['keyword_only']
         ]
-        
+
         # 处理位置参数
         for i, arg_value in enumerate(positional_args):
             if i < len(positionable_params):
@@ -487,12 +487,12 @@ class CommandParser:
                 args_list.append(try_convert_type(arg_value))
             else:
                 raise ParamError(f"参数过多，最多支持 {len(positionable_params)} 个位置参数")
-        
+
         # 检查必需参数（只检查命名参数，*args参数不参与必需性检查）
         for param_name, param_info in params_info.items():
             if not param_info['optional'] and param_name not in kwargs:
                 raise ParamError(f"缺少必需参数: {param_name}")
-        
+
         # 执行命令函数
         merged_kwargs = {**kwargs, **keyword_args}
         return func(*args_list, **merged_kwargs)
@@ -507,55 +507,55 @@ class CommandParser:
                 keyword_only = param_info.get('keyword_only', False)
                 if 'default' in param_info:
                     keyword_only = param_info.get('keyword_only', True)
-                
+
                 processed_params[param_name] = {
                     'type': param_info.get('type', str),
                     'default': param_info.get('default', None),
                     'optional': 'default' in param_info,
                     'keyword_only': keyword_only
                 }
-    
+
         # 处理 accepts_args 和 accepts_kwargs
         accepts_args = 'accepts_args' in command_info
         accepts_kwargs = 'accepts_kwargs' in command_info
-        
+
         # 预生成简短帮助信息（包括参数和*args/**kwargs指示）
         short_help_parts = []
-        
+
         # 添加命令名称
         # 注意：这里我们不添加命令名称，因为命令列表显示时会单独显示命令名称
         # short_help_parts.append(cmd_name)
-    
+
         # 添加参数信息
         params_str = ' '.join([
             f"[{param_name}{'?' if param_info['optional'] else ''}]" 
             for param_name, param_info in processed_params.items()
         ])
-        
+
         if params_str:
             short_help_parts.append(params_str)
-        
+
         # 添加*args和**kwargs指示
         if accepts_args:
             short_help_parts.append("[*args]")
         if accepts_kwargs:
             short_help_parts.append("[**kwargs]")
-        
+
         # 添加命令说明
         original_help_text = command_info.get('help', '无说明')
         help_text = original_help_text
         # 截断到第一个换行符
         if '\n' in help_text:
             help_text = help_text.split('\n')[0]
-    
+
         if short_help_parts:
             short_help = f"{' '.join(short_help_parts)} - {help_text}"
         else:
             short_help = f"- {help_text}"
-        
+
         # 生成完整的帮助信息
         full_help = f"{original_help_text}\n\n"
-        
+
         params = processed_params
         if params:
             full_help += "参数:\n"
@@ -565,7 +565,7 @@ class CommandParser:
                     full_help += f"    默认值: {param_info['default']}\n"
                 else:
                     full_help += f"    默认值: 无默认值\n"
-                
+
                 # 尝试从原始 command_info 中获取参数的 help
                 original_param_help = command_info.get('params', {}).get(param_name, {}).get('help')
                 if original_param_help:
@@ -590,58 +590,58 @@ class CommandParser:
 
     def add_command(self, command_name: str, command_info: CommandInfo) -> None:
         """添加命令到解析器
-        
+
         Args:
             command_name: 命令名称
             command_info: 命令信息字典
-            
+
         Raises:
             ValueError: 当命令已存在时
         """
         if command_name in self.commands:
             raise ValueError(f"命令 '{command_name}' 已存在")
-            
+
         self.commands[command_name] = self._process_command_info(command_info)
 
     def remove_command(self, command_name: str) -> None:
         """从解析器移除命令
-        
+
         Args:
             command_name: 命令名称
-            
+
         Raises:
             ValueError: 当命令不存在时
         """
         if command_name not in self.commands:
             raise NotACommand(f"命令 '{command_name}' 不存在")
-            
+
         # 移除所有指向该命令的别名
         aliases_to_remove = [
             alias for alias, cmd in self.aliases.items()
             if cmd == command_name
         ]
-        
+
         for alias in aliases_to_remove:
             del self.aliases[alias]
-            
+
         del self.commands[command_name]
 
 
 def parse_google_docstring(docstring: Optional[str]) -> Tuple[str, Dict[str, str], Optional[str]]:
     """解析 Google 风格的文档字符串
-    
+
     Args:
         docstring: 要解析的文档字符串
-        
+
     Returns:
         Tuple[命令帮助信息, 参数字典, 返回信息]
     """
     if not docstring:
         return "无说明", {}, None
-    
+
     # 清理文档字符串
     docstring = docstring.strip()
-    
+
     # 提取命令帮助信息（Args 之前的内容）
     help_info = ""
     args_section = re.search(r'^\s*Args:\s*$', docstring, re.MULTILINE)
@@ -650,75 +650,75 @@ def parse_google_docstring(docstring: Optional[str]) -> Tuple[str, Dict[str, str
     else:
         # 如果没有 Args 部分，整个文档字符串都是帮助信息
         help_info = docstring
-    
+
     # 提取参数信息
     params_info = {}
     if args_section:
         # 查找 Args 部分
         args_start = args_section.end()
-        
+
         # 查找下一个节（Returns 或 Raises）
         next_section = re.search(r'^\s*(?:Returns|Raises):\s*$', docstring[args_start:], re.MULTILINE)
         if next_section:
             args_text = docstring[args_start:args_start + next_section.start()]
         else:
             args_text = docstring[args_start:]
-        
+
         # 解析参数行
         param_pattern = r'^\s*(\w+):\s*(.*?)(?=\n\s*\w+:|$|\n\s*$)'
         for match in re.finditer(param_pattern, args_text, re.MULTILINE | re.DOTALL):
             param_name, param_help = match.groups()
             params_info[param_name.strip()] = param_help.strip()
-    
+
     # 提取返回信息
     return_info = None
     returns_section = re.search(r'^\s*Returns:\s*$', docstring, re.MULTILINE)
     if returns_section:
         returns_start = returns_section.end()
-        
+
         # 查找下一个节（Raises）或文档结束
         next_section = re.search(r'^\s*Raises:\s*$', docstring[returns_start:], re.MULTILINE)
         if next_section:
             returns_text = docstring[returns_start:returns_start + next_section.start()]
         else:
             returns_text = docstring[returns_start:]
-        
+
         return_info = returns_text.strip()
-    
+
     return help_info, params_info, return_info
 
 def infer_command_info(func: Callable, **overrides) -> CommandInfo:
     """从函数签名和文档字符串推断 CommandInfo"""
     sig = inspect.signature(func)
     type_hints = get_type_hints(func)
-    
+
     # 解析文档字符串
     help_info, params_doc, return_info = parse_google_docstring(func.__doc__)
-    
+
     # 构建参数字典
     params = {}
     for param_name, param in sig.parameters.items():
         # 跳过 self 和 cls 参数
         if param_name in ('self', 'cls'):
             continue
-            
+
         param_info = {}
-        
+
         # 从类型提示获取类型
         if param_name in type_hints:
             param_info['type'] = type_hints[param_name]
-        
+
         # 从默认值判断是否为可选参数
         if param.default != param.empty:
             param_info['default'] = param.default
             param_info['keyword_only'] = True  # 有默认值的参数默认只能通过关键字指定
-        
+
         # 从文档字符串获取参数帮助信息
         if param_name in params_doc:
             param_info['help'] = params_doc[param_name]
-        
+
         params[param_name] = param_info
-    
+
     # 检查是否有 *args 和 **kwargs
     has_var_args = any(
         p.kind == p.VAR_POSITIONAL for p in sig.parameters.values()
@@ -726,22 +726,22 @@ def infer_command_info(func: Callable, **overrides) -> CommandInfo:
     has_var_kwargs = any(
         p.kind == p.VAR_KEYWORD for p in sig.parameters.values()
     )
-    
+
     # 构建基本 CommandInfo
     cmd_info: CommandInfo = {
         'func': func,
         'params': params,
         'help': overrides.get('help', help_info)
     }
-    
+
     # 添加返回信息
     if return_info:
         cmd_info['return_info'] = return_info
-    
+
     if has_var_args:
         cmd_info['accepts_args'] = overrides.get('accepts_args', '可变位置参数')
-    
+
     if has_var_kwargs:
         cmd_info['accepts_kwargs'] = overrides.get('accepts_kwargs', '可变关键字参数')
-    
+
     return cmd_info

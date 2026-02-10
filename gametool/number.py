@@ -23,22 +23,22 @@ def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal[
     """
     value *= conversion_factors[value_unit]
     unit_ = None
-    
+
     # 选择合适的单位
     for unit in display_thresholds:
         if value >= display_thresholds[unit][0]:
             continue
         unit_ = unit
         break
-        
+
     if unit_ is None:
         unit_ = unit_map[-1]
-        
+
     if depth == 1:
         # 确定小数位数
         thresholds = display_thresholds[unit_]
         ndigits = 0  # 默认保留0位小数
-        
+
         # 从第二个阈值开始检查（第一个是单位切换阈值）
         for i in range(1, len(thresholds)):
             if value >= thresholds[i]:
@@ -47,36 +47,36 @@ def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal[
         else:
             # 如果没有找到满足条件的阈值，使用最大小数位数
             ndigits = len(thresholds) - 1
-            
+
         # 计算转换后的值
         converted_value = value / conversion_factors[unit_]
-        
+
         # 四舍五入到指定小数位数
         if ndigits == 0:
             formatted_value = round(converted_value)
         else:
             formatted_value = round(converted_value, ndigits)
-            
+
         # 去掉不必要的.0
         if formatted_value.is_integer():
             formatted_value = int(formatted_value)
-            
+
         return f'{formatted_value}{units[basic.unit_type][unit_map.index(unit_)]}'
     else:
         results = []
         remaining_value = value
         current_unit_idx = unit_map.index(unit_)
-        
+
         for i in range(depth):
             if remaining_value == 0 or current_unit_idx < 0:
                 break
-                
+
             current_unit = unit_map[current_unit_idx]
             current_factor = conversion_factors[current_unit]
-            
+
             # 计算当前单位的整数值
             amount = remaining_value // current_factor
-            
+
             if amount > 0:
                 # 直接使用整数部分
                 results.append(f"{int(amount)}{units[basic.unit_type][current_unit_idx]}")
@@ -85,7 +85,7 @@ def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal[
                 # 对于小数部分，确定小数位数
                 thresholds = display_thresholds[current_unit]
                 ndigits = 0  # 默认保留0位小数
-                
+
                 # 从第二个阈值开始检查
                 for j in range(1, len(thresholds)):
                     if remaining_value >= thresholds[j]:
@@ -94,33 +94,33 @@ def format_physical_quantity(value: float, value_unit: str, units: Dict[Literal[
                 else:
                     # 如果没有找到满足条件的阈值，使用最大小数位数
                     ndigits = len(thresholds) - 1
-                    
+
                 # 计算并格式化小数部分
                 if ndigits == 0:
                     formatted_value = round(remaining_value / current_factor)
                 else:
                     formatted_value = round(remaining_value / current_factor, ndigits)
-                    
+
                 if formatted_value.is_integer():
                     formatted_value = int(formatted_value)
-                    
+
                 results.append(f"{formatted_value}{units[basic.unit_type][current_unit_idx]}")
                 remaining_value = 0  # 小数部分处理完后，剩余值为0
-                
+
             current_unit_idx -= 1
 
         return ' '.join(results) if results else f"0{units[basic.unit_type][unit_map.index(unit_)]}"
 
 def auto_distance_expression(distance: float, val_unit: Literal['m', 'km', 'au', 'ly'] = 'm', depth: int = 1) -> str:
     """自动生成距离表达式
-    
+
     根据距离值返回合适的单位表达方式。
-    
+
     Args:
         distance: 距离值
         val_unit: 距离的初始单位（默认 m）
         depth: 显示深度（单位数量）
-        
+
     Returns:
         距离的字符串表示
     """
@@ -303,7 +303,7 @@ def english_unit_numerals(num):
     units = ['', 'k', 'M', 'B', 'T']
     if num == 0:
         return '0'
-    
+
     result = ''
     for i, unit in enumerate(units):
         if num % 1000 != 0:
@@ -323,7 +323,7 @@ def chinese_unit_numerals(num):
     units = ['', '万', '亿', '兆']
     if num == 0:
         return '0'
-    
+
     result = ''
     for i, unit in enumerate(units):
         if num % 10000 != 0:

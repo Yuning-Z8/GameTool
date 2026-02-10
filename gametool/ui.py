@@ -2,7 +2,7 @@ import re
 from typing import List, Generator, Union
 
 from . import basic
-from .basic import FULL_WIDTH_CHAR_RANGE, CHAR_WIDTH_MAPS, CHINESE_CHAR_RANGE, ANSI_ESCAPE_RE
+from .basic import FULL_WIDTH_CHAR_RANGE, CHINESE_CHAR_RANGE, ANSI_ESCAPE_RE
 
 
 class ANSI:
@@ -400,33 +400,16 @@ def is_in_range(char: str, range) -> bool:
 
 # 修改display_width函数
 def display_width(text: str) -> int:
-    """计算字符串的实际显示宽度
+    """计算字符串的显示宽度
     
     Args:
         text: 要计算的字符串，可以包含ANSI转义序列
-        
     Returns:
         字符串的显示宽度（不包括ANSI转义序列）
     """
     # 移除ANSI转义序列后再计算宽度
     text = ANSI_ESCAPE_RE.sub('', text)
-    if basic.is_equal_width_font:
-        return _display_width_of_equal_width_font(text)
-    else:
-        return _display_width_of_non_equal_width_font(text)
 
-def _display_width_of_equal_width_font(text: str) -> int:
-    """计算字符串在等宽字体中的显示宽度
-    
-    全角字符（如中文、日文、韩文、全角符号、emoji等）计为100个宽度，
-    半角字符计为50个宽度。
-    
-    Args:
-        text: 要计算的字符串
-        
-    Returns:
-        字符串的显示宽度
-    """
     width = 0
     for char in text:
         # 检查字符是否属于全角字符范围
@@ -434,23 +417,6 @@ def _display_width_of_equal_width_font(text: str) -> int:
             width += 100
         else:
             width += 50
-    return width
-
-def _display_width_of_non_equal_width_font(text: str) -> int:
-    """计算字符串在非等宽字体中的显示宽度
-    
-    Args:
-        text: 要计算的字符串
-        
-    Returns:
-        字符串的显示宽度
-    """
-    width = 0
-    for char in text:
-        # 检查是否在映射表中
-        width += CHAR_WIDTH_MAPS[basic.font].get(char,
-                                                 100 if is_in_range(char, CHINESE_CHAR_RANGE)
-                                                 else 50)
     return width
 
 def bar(val: float, max_: float, lenth: int = 8, empty: str ='.', full: str = '#') -> str:
