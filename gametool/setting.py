@@ -188,6 +188,7 @@ class Ochoice(Option):
         super().__init__(name, path, optname, constraction, list(choices.values()))
         self.choices = choices  # 显示名到值的映射
         self.reverse_choices = {v: k for k, v in choices.items()}  # 值到显示名的映射
+        self.set_ui = UI().text('从以下值选择').choice(self.get_choice_display, addnum=False)
 
     def value_set(self, value: Any = None) -> None:
         """设置值（支持按编号或直接值设置）
@@ -201,7 +202,7 @@ class Ochoice(Option):
         try:
             if value is None:
                 # 没有提供值时，显示选项列表供用户选择
-                value = yinput(UI().text('从以下值选择').choice(self.get_choice_display(), addnum=False).flush())
+                value = yinput(self.set_ui.flush())
             # 尝试按编号设置
             if isinstance(value, str) and value.isdigit():
                 idx = int(value) - 1
@@ -290,6 +291,7 @@ class Olist(Option):
         self.item_type = item_type
         self.item_validator = item_validator or (lambda x: True)
         self.current_list: Optional[list] = None
+        self.editor_ui = UI()
 
     def value_chack(self, value : list) -> None:
         """检查输入是否符合要求"""
@@ -392,18 +394,18 @@ class Olist(Option):
         """显示列表编辑界面"""
         self.current_list = self.value()
         while True:
-            ui = UI().center_text(self.optname, '=')
+            self.editor_ui.clean(clean_cache=False).text_line(center_content=f"编辑列表: {self.optname}", filler='=')
 
             # 显示列表内容
             current_list = self.value()
             for i, item in enumerate(current_list):
-                ui = ui.split_text(str(i), item)
-            ui.line('-')
-            ui.text(f"列表长度: {len(current_list)}")
+                self.editor_ui.text_line(left_content=str(i), right_content=item)
+            self.editor_ui.line('-')
+            self.editor_ui.text(f"列表长度: {len(current_list)}")
             if self.limit[1] is not None:
-                ui.text(f"最大允许长度: {self.limit[1]}")
+                self.editor_ui.text(f"最大允许长度: {self.limit[1]}")
 
-            result = cmdinput(ui.flush(), self.commands, command_identification='')
+            result = cmdinput(self.editor_ui.flush(), self.commands, command_identification='')
 
             if result == 'back':
                 break
@@ -458,6 +460,7 @@ class Setting:
         self.options: List['Union[Option, Setting]'] = []  # 存储配置项或子菜单
         self.constraction = lambda: constraction
         self.condition_of_show = lambda: True  # 控制菜单是否显示的条件函数
+        self.ui = UI()  # 菜单界面UI实例
 
     def add(self, *options: 'Union[Option, Setting]') -> 'Setting':
         """添加配置项或子菜单
@@ -476,7 +479,7 @@ class Setting:
 
         显示当前菜单的所有配置项和子菜单，处理用户交互，允许修改配置值。
         """
-        ui = UI().split_text(self.name).line('=')
+        self.ui.clean().text_line(center_content=self.name).line('=')
         while True:
             i = 0
             keys = []
@@ -486,20 +489,20 @@ class Setting:
                 keys.append(j)
                 i += 1
                 # 显示每个选项及其当前值
-                ui.split_text(f'{i}: {j}', j.value_name())
+                self.ui.text_line(left_content=f'{i}: {j}', right_content=j.value_name())
                 constraction = j.constraction()
                 if constraction is not None:
-                    ui.text(constraction)
+                    self.ui.text(constraction)
             # 获取用户输入
-            i = yinput(ui.flush())
-            ui = UI().split_text(self.name).line('=')
+            i = yinput(self.ui.flush())
+            self.ui.clean().text_line(center_content=self.name).line('=')
             if i == '0':  # 返回上一级
                 return
             i = i.split(' ')
             try:
                 opt = keys[int(i[0]) - 1]  # 获取选中的配置项
             except Exception as e:
-                ui.line('-').text(str(e)).line('-')  # 显示错误信息
+                self.ui.line('-').text(str(e)).line('-')  # 显示错误信息
                 continue
             if isinstance(opt, Option):
                 try:
@@ -508,7 +511,7 @@ class Setting:
                     else:
                         opt.value_set(i[1])  # 设置配置项的值
                 except Exception as e:
-                    ui.line('-').text(str(e)).line('-')
+                    self.ui.line('-').text(str(e)).line('-')
                     continue
             else:
                 opt.look()  # 如果是子菜单，递归显示

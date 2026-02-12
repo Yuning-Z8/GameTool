@@ -143,16 +143,17 @@ class UI:
     考虑了不同字符宽度的显示问题，支持等宽和非等宽字体。
     """
 
-    def __init__(self, width: Union[int, None] = None) -> None:
+    def __init__(self, width: Optional[int] = None) -> None:
         """初始化UI实例
 
         Args:
             width: UI显示宽度，默认为basic模块中的ui_width
         """
-        self.width = basic.ui_width if width is None else width  # UI的显示宽度，单位为全角字符
+        self.width = width or basic.ui_width  # UI的显示宽度，单位为全角字符
+        self.last_width = self.width  # 上一次渲染时的宽度，用于检测宽度变化
         self.items:List[Tuple[Callable, Tuple, bool]] = []
         self.lines: List[str] = []
-        self.father: Optional['UI'] = None  # 父UI引用，默认为None
+        self.father: 'UI' = self  # 父UI引用
         self.static_cache: dict[Tuple[Callable, Tuple], List[str]] = {}  # 静态内容缓存，用于存储不变的文本内容
         self.dynamic_cache: dict[Tuple[Callable, Tuple], Tuple[List, List[str]]] = {}  # 动态内容缓存，用于存储可能变化的文本内容
 
@@ -212,8 +213,22 @@ class UI:
         """
         if sub_ui is None:
             sub_ui = UI(self.width - 2)  # 减去2个字符宽度用于边框显示
+        sub_ui.father = self  # 设置父UI引用
         self.items.append((self._sub_ui_render, (sub_ui,), cache))
         return sub_ui
+    
+    def line(self, content: str = '=', cache: bool = True) -> 'UI':
+        """添加分割线到界面
+
+        Args:
+            content: 分割线内容，默认为'='
+            cache: 是否缓存该分割线内容，默认为True
+
+        Returns:
+            返回self以支持链式调用
+        """
+        self.items.append((self._line_render, (content,), cache))
+        return self
 
     def render(self) -> list[str]:
         """获取格式化后的界面内容列表
@@ -221,6 +236,10 @@ class UI:
         Returns:
             界面内容的字符串列表
         """
+        if self.width != self.last_width:
+            self.static_cache.clear()  # 宽度变化时清除静态缓存
+            self.dynamic_cache.clear()  # 宽度变化时清除动态缓存
+            self.last_width = self.width
         result = []
         for item in self.items:
             dynamic = False  # 标记是否存在动态内容
@@ -251,15 +270,19 @@ class UI:
         self.lines = result
         return result
 
-    def clean(self) -> 'UI':
+    def clean(self, clean_cache: bool = False) -> 'UI':
         """清除当前所有界面内容
+
+        Args:
+            clean_cache: 是否同时清除缓存，默认为False
 
         Returns:
             返回self以支持链式调用
         """
         self.items = []
-        self.static_cache.clear()
-        self.dynamic_cache.clear()
+        if clean_cache:
+            self.static_cache.clear()
+            self.dynamic_cache.clear()
         return self
 
     def flush(self) -> str:
@@ -358,6 +381,10 @@ class UI:
             result.append(f"{line}│")
         result += self._text_line_render(right_content='┘', filler='─')
         return result
+
+    def _line_render(self, content: str) -> list[str]:
+        """渲染分割线"""
+        return [content * (self.width // display_width(content))]
 
     def _format_output(self, input_word_group: List[str], len_block: int) -> List[str]:
         """格式化输出文本，将文本分组并按指定宽度排列
