@@ -25,15 +25,16 @@ FULL_WIDTH_CHAR_RANGE = CHINESE_CHAR_RANGE + [
 ]
 ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
 
-
 # setting
 DL = 'dictlike'  # 字典类型的标识符
 CL = 'class'     # 类类型的标识符
 MD = 'module'    # 模块类型的标识符
 
 
+
+# 可配置项
 # UI配置
-ui_width = 2000  # 默认UI显示宽度（单位：全角字符/100）
+ui_width = 80  # 默认UI显示宽度（单位：半角字符）
 
 
 # input配置
